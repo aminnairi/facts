@@ -1,0 +1,19 @@
+{
+  "type": "module",
+  "name": "@aminnairi/facts",
+  "version": "0.1.0",
+  "license": "MIT",
+  "description": "Database agnostic implementation of the Event Sourcing design pattern",
+  "private": true,
+  "scripts": {
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "vitest": "^4.0.9"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@vitest/coverage-v8": "^4.0.9",
+    "tsx": "^4.20.6"
+  }
+}
