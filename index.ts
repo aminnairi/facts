@@ -109,10 +109,7 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
         query.handle(fact);
       });
     } catch (error) {
-      if (error instanceof Error && error.message.includes("UNIQUE constraint failed")) {
-        return new ConcurrencyError();
-      }
-      throw error;
+      return new ConcurrencyError();
     }
   }
 
