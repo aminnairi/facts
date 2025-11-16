@@ -1,5 +1,5 @@
 
-import { match, MemoryFactStore, Query } from "../.."
+import { match, MemoryFactStore, Query } from "@aminnairi/facts"
 
 interface TodoAddedV1Fact {
   identifier: string

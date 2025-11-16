@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "type": "module",
+  "name": "@aminnairi/facts-examples",
+  "version": "0.1.0",
+  "description": "Examples for @aminnairi/facts"
+}

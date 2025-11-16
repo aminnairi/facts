@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { SqliteFactStore } from "../..";
+import { SqliteFactStore } from "@aminnairi/facts";
 
 interface TodoAddedV1Fact {
   name: "todo-added"

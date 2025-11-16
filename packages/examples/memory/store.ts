@@ -1,4 +1,4 @@
-import { MemoryFactStore } from "../.."
+import { MemoryFactStore } from "@aminnairi/facts"
 
 interface TodoAddedV1Fact {
   identifier: string
