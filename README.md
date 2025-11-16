@@ -94,8 +94,8 @@ await factStore.save({
 
 ## ✍️ Examples
 
-- [Fact store implemented using `node:sqlite`](./examples/sqlite/store.ts)
-- [Fact store using the default RAM implementation](./examples/memory/store.ts)
+- [Fact store using the provided SQLite implementation](./examples/sqlite/store.ts)
+- [Fact store using the provided RAM implementation](./examples/memory/store.ts)
 - [Query implemented using RAM](./examples/memory/query.ts)
 
 ## Contributing
