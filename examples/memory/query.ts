@@ -1,5 +1,5 @@
 
-import { MemoryFactStore, Query } from "../.."
+import { match, MemoryFactStore, Query } from "../.."
 
 interface TodoAddedV1Fact {
   identifier: string
@@ -39,16 +39,17 @@ class MemoryDescribedTodoQuery implements Query<TodoFact, DescribedTodo[]> {
   public constructor(private readonly todos: Map<string, DescribedTodo> = new Map()) { }
 
   public async handle(fact: TodoFact): Promise<void> {
-    if (fact.name === "todo-added") {
-      this.todos.set(fact.aggregateIdentifier, {
-        identifier: fact.aggregateIdentifier,
-        description: `[${fact.data.done ? "Done" : "Todo"}] ${fact.data.name}`
-      })
-    }
-
-    if (fact.name === "todo-removed") {
-      this.todos.delete(fact.aggregateIdentifier)
-    }
+    match(fact, {
+      "todo-added": todoAddedFact => {
+        this.todos.set(fact.aggregateIdentifier, {
+          identifier: fact.aggregateIdentifier,
+          description: `[${todoAddedFact.data.done ? "Done" : "Todo"}] ${todoAddedFact.data.name}`
+        })
+      },
+      "todo-removed": todoRemovedFact => {
+        this.todos.delete(todoRemovedFact.aggregateIdentifier)
+      }
+    })
   }
 
   public async fetch(): Promise<DescribedTodo[]> {
