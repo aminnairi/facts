@@ -77,7 +77,14 @@ interface TodoFact =
   | TodoAddedV1Fact
   | TodoRemovedV1Fact
 
+interface Todo {
+  description: string
+}
+
 const factStore = new MemoryFactStore<TodoFact>()
+const query = new MemoryTodoQuery()
+
+factStore.register(query)
 
 await factStore.save({
   identifier: randomUUID(),
@@ -106,6 +113,12 @@ await factStore.save({
     done: false
   }
 })
+
+const todos = await query.fetch()
+
+for (const todo of todos) {
+  console.log(todo.description)
+}
 ```
 
 ## ✍️ Examples
