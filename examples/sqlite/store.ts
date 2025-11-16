@@ -30,7 +30,7 @@ type TodoFact =
   | TodoAddedV1Fact
   | TodoRemovedV1Fact
 
-const factStore = new SqliteFactStore<TodoFact>()
+const factStore = new SqliteFactStore<TodoFact>(":memory:")
 const aggregateIdentifier = randomUUID()
 
 await factStore.save({
