@@ -49,6 +49,10 @@ export function until<Value>(values: Value[], stop: (value: Value) => boolean): 
   ]
 }
 
+export function match<Fact extends FactShape, Output>(fact: Fact, options: { [Key in Fact["name"]]: (fact: Extract<Fact, { name: Key }>) => Output }): Output {
+  return options[fact.name]()
+}
+
 export class MemoryFactStore<Fact extends FactShape> implements FactStore<Fact> {
   public constructor(
     private readonly facts: Map<string, Fact> = new Map(),
