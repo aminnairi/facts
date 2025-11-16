@@ -40,8 +40,6 @@ class MemoryDescribedTodoQuery implements Query<TodoFact, DescribedTodo[]> {
   public constructor(private readonly todos: Map<string, DescribedTodo> = new Map()) { }
 
   public async handle(fact: TodoFact): Promise<void> {
-    console.log(fact)
-
     match(fact, {
       "todo-added": todoAddedFact => {
         this.todos.set(fact.aggregateIdentifier, {
@@ -109,5 +107,5 @@ console.log("List of facts")
 const todos = await describedTodoQuery.fetch()
 
 for (const todo of todos) {
-  console.log(todo)
+  console.log(`Todo#${todo.identifier}: ${todo.description} (${todo.createdAt})`)
 }
