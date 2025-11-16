@@ -1,6 +1,6 @@
 # @aminnairi/facts
 
-Database agnostic implementation of the Event Sourcing design pattern
+Database agnostic implementation of the Event Sourcing & CQRS design pattern
 
 ## ✨ Features
 
@@ -10,6 +10,7 @@ Database agnostic implementation of the Event Sourcing design pattern
 - Ready for deployment in clusters thanks to optimistic locking
 - Database agnostic, can work with memory, files, SQL, NoSQL, ...
 - Event Sourcing inspired to prevent data loss and enable smarted analytics
+- Query implementation for CQRS applications
 - No migration script required, evolve your data model as your project evolve
 
 ## ✋ Requirements

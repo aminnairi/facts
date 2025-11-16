@@ -3,7 +3,7 @@
   "name": "@aminnairi/facts",
   "version": "0.1.0",
   "license": "MIT",
-  "description": "Database agnostic implementation of the Event Sourcing design pattern",
+  "description": "Database agnostic implementation of the Event Sourcing & CQRS design pattern",
   "private": true,
   "scripts": {
     "test": "vitest run --coverage"
