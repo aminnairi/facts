@@ -98,6 +98,108 @@ await factStore.save({
 - [Fact store using the provided RAM implementation](./examples/memory/store.ts)
 - [Query implemented using RAM](./examples/memory/query.ts)
 
+## API
+
+### FactShape
+
+This is the base interface for any fact. It defines the common properties that
+every fact must have.
+
+```typescript
+interface FactShape {
+  identifier: string;
+  name: string;
+  version: number;
+  sequence: number;
+  date: Date;
+  aggregate: string;
+  aggregateIdentifier: string;
+  data: unknown;
+}
+```
+
+### ConcurrencyError
+
+This is a custom error class that is thrown when there is a sequence conflict
+when saving a fact, which is part of the optimistic locking mechanism.
+
+```typescript
+class ConcurrencyError extends Error {
+  public override readonly name = "ConcurrencyError";
+}
+```
+
+### FactStore
+
+This is an interface that defines the contract for a fact store. It includes
+methods for saving and finding facts, and for registering queries.
+
+```typescript
+interface FactStore<Fact extends FactShape> {
+  save(fact: Fact): Promise<void | ConcurrencyError>;
+  find(accept: Accept<Fact>): Promise<Fact[]>;
+  findFromSnapshot(isSnapshot: IsSnapshot<Fact>): Promise<Fact[]>;
+  register(listener: Query<Fact, unknown>): void;
+}
+```
+
+### Query
+
+This interface defines the contract for a query that can handle facts and can
+be used to build read models.
+
+```typescript
+interface Query<Fact extends FactShape, Data> {
+  handle(fact: Fact): Promise<void>;
+  fetch(): Promise<Data>;
+}
+```
+
+### until
+
+This is a utility function that takes an array and a stop condition, and
+returns a new array with all the elements until the stop condition is met. It's
+used by `findFromSnapshot`.
+
+```typescript
+function until<Value>(
+  values: Value[],
+  stop: (value: Value) => boolean,
+): Value[];
+```
+
+### match
+
+This is a utility function that provides a way to do pattern matching on a
+fact's `name` property.
+
+```typescript
+function match<Fact extends FactShape, Output>(
+  fact: Fact,
+  options: {
+    [Key in Fact["name"]]: (fact: Extract<Fact, { name: Key }>) => Output;
+  },
+): Output;
+```
+
+### MemoryFactStore
+
+Create a store for saving facts in your RAM. This should not be used in a
+production environment.
+
+```typescript
+class MemoryFactStore<Fact extends FactShape> implements FactStore<Fact>
+```
+
+### SqliteFactStore
+
+Create a store for saving facts in a SQLite database. This implementation is
+suitable for production environments.
+
+```typescript
+class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact>
+```
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](./CONTRIBUTING.md).
