@@ -33,17 +33,21 @@ type TodoFact =
 interface DescribedTodo {
   identifier: string
   description: string
+  createdAt: Date
 }
 
 class MemoryDescribedTodoQuery implements Query<TodoFact, DescribedTodo[]> {
   public constructor(private readonly todos: Map<string, DescribedTodo> = new Map()) { }
 
   public async handle(fact: TodoFact): Promise<void> {
+    console.log(fact)
+
     match(fact, {
       "todo-added": todoAddedFact => {
         this.todos.set(fact.aggregateIdentifier, {
           identifier: fact.aggregateIdentifier,
-          description: `[${todoAddedFact.data.done ? "Done" : "Todo"}] ${todoAddedFact.data.name}`
+          description: `[${todoAddedFact.data.done ? "Done" : "Todo"}] ${todoAddedFact.data.name}`,
+          createdAt: todoAddedFact.date
         })
       },
       "todo-removed": todoRemovedFact => {
