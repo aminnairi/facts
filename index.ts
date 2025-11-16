@@ -49,7 +49,7 @@ export function until<Value>(values: Value[], stop: (value: Value) => boolean): 
   ]
 }
 
-export function match<Fact extends FactShape, Output>(fact: Fact, options: { [Key in Fact["name"]]: (fact: Extract<Fact, { name: Key }>) => Output }): Output {
+export function match<Output, Fact extends FactShape>(fact: Fact, options: { [Key in Fact["name"]]: (fact: Extract<Fact, { name: Key }>) => Output }): Output {
   return options[fact.name]()
 }
 
@@ -89,7 +89,7 @@ export class MemoryFactStore<Fact extends FactShape> implements FactStore<Fact> 
 export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> {
   private readonly queries: Set<Query<Fact, unknown>> = new Set();
 
-  public constructor(private readonly database: DatabaseSync = new DatabaseSync("./database.sqlite")) {
+  public constructor(path: string, private readonly database: DatabaseSync = new DatabaseSync(path)) {
     this.database.exec("CREATE TABLE IF NOT EXISTS facts(identifier TEXT PRIMARY KEY, aggregate_name TEXT NOT NULL, aggregate_identifier TEXT NOT NULL, sequence INTEGER NOT NULL, fact TEXT NOT NULL, UNIQUE(aggregate_name, aggregate_identifier, sequence))");
   }
 
