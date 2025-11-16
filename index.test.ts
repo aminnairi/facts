@@ -6,6 +6,7 @@ interface UserCreatedV1Fact {
   identifier: string
   name: "user-created"
   version: 1
+  date: Date
   sequence: number
   aggregateIdentifier: string
   aggregate: "user"
@@ -19,6 +20,7 @@ interface UserDeletedV1Fact {
   identifier: string
   name: "user-deleted"
   version: 1
+  date: Date
   sequence: number
   aggregateIdentifier: string
   aggregate: "user"
@@ -28,6 +30,7 @@ interface UserDeletedV1Fact {
 interface UserSnapshotV1Fact {
   identifier: string
   name: "user-snapshot"
+  date: Date
   version: 1
   sequence: number
   aggregateIdentifier: string
@@ -82,6 +85,7 @@ test("It should return the events after adding them to the store", async () => {
     name: "user-created",
     sequence: 0,
     version: 1,
+    date: new Date("2025-01-01"),
     aggregateIdentifier: aggregateIdentifier,
     aggregate: "user",
     data: {
@@ -98,6 +102,7 @@ test("It should return the events after adding them to the store", async () => {
       name: "user-created",
       sequence: 0,
       version: 1,
+      date: new Date("2025-01-01"),
       aggregateIdentifier: aggregateIdentifier,
       aggregate: "user",
       data: {
@@ -125,6 +130,7 @@ test("It should return one event among many others", async () => {
     name: "user-created",
     sequence: 0,
     version: 1,
+    date: new Date("2025-01-01"),
     aggregateIdentifier: firstUser.identifier,
     aggregate: "user",
     data: {
@@ -138,6 +144,7 @@ test("It should return one event among many others", async () => {
     name: "user-created",
     sequence: 1,
     version: 1,
+    date: new Date("2025-01-01"),
     aggregateIdentifier: secondUser.identifier,
     aggregate: "user",
     data: {
@@ -156,6 +163,7 @@ test("It should return one event among many others", async () => {
       name: "user-created",
       sequence: 0,
       version: 1,
+      date: new Date("2025-01-01"),
       aggregateIdentifier: firstUser.identifier,
       aggregate: "user",
       data: {
@@ -178,6 +186,7 @@ test("It should return all events from a snpashot only", async () => {
     name: "user-created",
     sequence: 0,
     version: 1,
+    date: new Date("2025-01-01"),
     aggregateIdentifier: randomUUID(),
     aggregate: "user",
     data: {
@@ -191,6 +200,7 @@ test("It should return all events from a snpashot only", async () => {
     name: "user-snapshot",
     sequence: 0,
     version: 1,
+    date: new Date("2025-01-01"),
     aggregateIdentifier: snapshotAggregateIdentifier,
     aggregate: "user",
     data: [
@@ -207,6 +217,7 @@ test("It should return all events from a snpashot only", async () => {
     sequence: 0,
     version: 1,
     aggregateIdentifier,
+    date: new Date("2025-01-01"),
     aggregate: "user",
     data: {
       email: "second@domain.com",
@@ -225,6 +236,7 @@ test("It should return all events from a snpashot only", async () => {
       sequence: 0,
       version: 1,
       aggregateIdentifier: snapshotAggregateIdentifier,
+      date: new Date("2025-01-01"),
       aggregate: "user",
       data: [
         {
@@ -239,6 +251,7 @@ test("It should return all events from a snpashot only", async () => {
       sequence: 0,
       version: 1,
       aggregateIdentifier,
+      date: new Date("2025-01-01"),
       aggregate: "user",
       data: {
         email: "second@domain.com",
@@ -259,6 +272,7 @@ test("It should return a concurrency error if two similar events are added", asy
     name: "user-created",
     sequence: 0,
     version: 1,
+    date: new Date(),
     aggregateIdentifier,
     aggregate: "user",
     data: {
@@ -272,6 +286,7 @@ test("It should return a concurrency error if two similar events are added", asy
     name: "user-created",
     sequence: 0,
     version: 1,
+    date: new Date(),
     aggregateIdentifier,
     aggregate: "user",
     data: {
@@ -297,6 +312,7 @@ test("It should trigger the listen function for queries", async () => {
     identifier,
     aggregate: "user",
     sequence: 0,
+    date: new Date(),
     name: "user-created",
     version: 1,
     data: {
