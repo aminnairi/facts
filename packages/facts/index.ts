@@ -50,7 +50,7 @@ export function until<Value>(values: Value[], stop: (value: Value) => boolean): 
 }
 
 export function match<Output, Fact extends FactShape>(fact: Fact, options: { [Key in Fact["name"]]: (fact: Extract<Fact, { name: Key }>) => Output }): Output {
-  return options[fact.name]()
+  return options[fact.name](fact)
 }
 
 export class MemoryFactStore<Fact extends FactShape> implements FactStore<Fact> {
