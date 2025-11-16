@@ -1,5 +1,5 @@
 import { test, expect } from "vitest"
-import { ConcurrencyError, MemoryFactStore, Query, until } from "."
+import { ConcurrencyError, match, MemoryFactStore, Query, SqliteFactStore, until } from "."
 import { randomUUID } from "crypto"
 
 interface UserCreatedV1Fact {
@@ -326,6 +326,177 @@ test("It should trigger the listen function for queries", async () => {
   expect(users).toStrictEqual([
     {
       email: "email@domain.com"
+    }
+  ])
+})
+
+test("It should match the correct fact", () => {
+  const aggregateIdentifier = randomUUID()
+  const identifier = randomUUID()
+
+  const fact = {
+    aggregate: "user",
+    aggregateIdentifier,
+    identifier,
+    name: "user-created",
+    sequence: 0,
+    version: 1,
+    date: new Date("2025-01-01"),
+    data: {
+      email: "first@domain.com",
+      password: "password"
+    }
+  } as UserFact
+
+  const output = match<boolean, UserFact>(fact, {
+    "user-created": () => {
+      return true
+    },
+    "user-deleted": () => {
+      return false
+    },
+    "user-snapshot": () => {
+      return false
+    }
+  })
+
+  expect(output).toStrictEqual(true)
+})
+
+test("It should work with the SQLite implementation", async () => {
+  const factStore = new SqliteFactStore<UserFact>(":memory:")
+  const identifier = randomUUID()
+  const aggregateIdentifier = randomUUID()
+  const query = new MemoryUsersWithEmailQuery()
+
+  factStore.register(query)
+
+  let error = await factStore.save({
+    identifier,
+    name: "user-created",
+    sequence: 0,
+    version: 1,
+    aggregate: "user",
+    aggregateIdentifier,
+    date: new Date("2025-01-01"),
+    data: {
+      email: "user@domain.com",
+      password: "password"
+    }
+  })
+
+  expect(error).toBeUndefined()
+
+  error = await factStore.save({
+    identifier: randomUUID(),
+    name: "user-created",
+    sequence: 0,
+    version: 1,
+    aggregate: "user",
+    aggregateIdentifier,
+    date: new Date(),
+    data: {
+      email: "user@domain.com",
+      password: "password"
+    }
+  })
+
+  expect(error).toBeInstanceOf(ConcurrencyError)
+
+  const output = await query.fetch()
+
+  expect(output).toStrictEqual([
+    {
+      email: "user@domain.com"
+    }
+  ])
+
+  const facts = await factStore.find()
+
+  expect(facts).toStrictEqual([
+    {
+      identifier,
+      name: "user-created",
+      sequence: 0,
+      version: 1,
+      aggregate: "user",
+      aggregateIdentifier,
+      date: new Date("2025-01-01").toISOString(),
+      data: {
+        email: "user@domain.com",
+        password: "password"
+      }
+    }
+  ])
+
+  const snapshotIdentifier = randomUUID()
+  const snapshotAggregateIdentifier = randomUUID()
+
+  await factStore.save({
+    identifier: snapshotIdentifier,
+    name: "user-snapshot",
+    sequence: 0,
+    version: 1,
+    aggregate: "user",
+    aggregateIdentifier: snapshotAggregateIdentifier,
+    date: new Date("2025-01-01"),
+    data: [
+      {
+        email: "user@domain.com",
+        password: "password"
+      }
+    ]
+  })
+
+  const anotherIdentifier = randomUUID()
+  const anotherAggregateIdentifier = randomUUID()
+
+  await factStore.save({
+    identifier: anotherIdentifier,
+    name: "user-created",
+    sequence: 0,
+    version: 1,
+    aggregate: "user",
+    aggregateIdentifier: anotherAggregateIdentifier,
+    date: new Date("2025-01-01"),
+    data: {
+      email: "another@domain.com",
+      password: "pass"
+    }
+  })
+
+  const factsWithSnapshot = await factStore.findFromSnapshot(fact => {
+    return fact.name === "user-snapshot"
+  })
+
+  expect(factsWithSnapshot).toStrictEqual([
+    {
+      identifier: snapshotIdentifier,
+      name: "user-snapshot",
+      sequence: 0,
+      version: 1,
+      aggregate: "user",
+      aggregateIdentifier: snapshotAggregateIdentifier,
+      date: new Date("2025-01-01").toISOString(),
+      data: [
+        {
+          email: "user@domain.com",
+          password: "password"
+        }
+      ]
+    },
+    {
+      identifier: anotherIdentifier,
+      name: "user-created",
+      sequence: 0,
+      version: 1,
+      aggregate: "user",
+      aggregateIdentifier: anotherAggregateIdentifier,
+      date: new Date("2025-01-01").toISOString(),
+      data: {
+        email: "another@domain.com",
+        password: "pass"
+      }
     }
   ])
 })
