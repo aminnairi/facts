@@ -34,17 +34,17 @@ npm install
 ## Test
 
 ```bash
-npm test
+npm -w packages/facts test
 ```
 
 > [!INFO]
-> Tests are located in the [`./index.test.ts`](./index.test.ts) file.
+> Tests are located in the [`./index.test.ts`](./packages/facts/index.test.ts) file.
 
 ## Example
 
 ```bash
-npx tsx examples/memory/store.ts
+npx -w packages/examples tsx memory/store.ts
 ```
 
 > [!NOTE]
-> Replace `examples/memory/store.ts` with the path of the file to run.
+> Replace [`memory/store.ts`](./packages/examples/memory/store.ts) with the path of the file to run.
