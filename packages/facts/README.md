@@ -26,6 +26,7 @@ implementing these patterns.
 - Database agnostic, can work with memory, files, SQL, NoSQL, ...
 - Event Sourcing inspired to prevent data loss and enable smarted analytics
 - Query implementation for CQRS applications
+- Easy initialization of Queries from past events useful after application restart
 - No migration script required, evolve your data model as your project evolve
 
 ## ✋ Requirements
