@@ -49,6 +49,7 @@ import { TodoFact, TodoAddedV1Fact } from "./facts";
 
 const factStore = new MemoryFactStore<TodoFact>();
 const query = new MemoryTodoQuery();
+const aggregaetIdentifier = randomUUID();
 
 factStore.register(query);
 
@@ -58,7 +59,7 @@ await factStore.save({
   version: 1,
   date: new Date(),
   aggregate: "todo",
-  aggregateIdentifier: randomUUID(),
+  aggregateIdentifier,
   sequence: 0,
   data: {
     name: "Do the dishes",
@@ -72,12 +73,9 @@ await factStore.save({
   version: 1,
   aggregate: "todo",
   date: new Date(),
-  aggregateIdentifier: randomUUID(),
-  sequence: 0,
-  data: {
-    name: "Do the dishes",
-    done: false,
-  },
+  aggregateIdentifier,
+  sequence: 1,
+  data: null,
 });
 
 const todos = await query.fetch();
@@ -208,4 +206,3 @@ See [`SECURITY.md`](./SECURITY.md).
 ## License
 
 See [`LICENSE`](./LICENSE).
-
