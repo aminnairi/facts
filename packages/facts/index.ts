@@ -104,9 +104,9 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
 
   public async save(fact: Fact): Promise<void | ConcurrencyError> {
     try {
-      const preparedStatement = this.database.prepare("INSERT INTO facts(identifier, aggregate_name, aggregate_identifier, sequence, fact) VALUES(:identifier, :aggregate_name, :aggregate_identifier, :sequence, :fact)")
+      const statement = this.database.prepare("INSERT INTO facts(identifier, aggregate_name, aggregate_identifier, sequence, fact) VALUES(:identifier, :aggregate_name, :aggregate_identifier, :sequence, :fact)")
 
-      preparedStatement.run({
+      statement.run({
         identifier: fact.identifier,
         aggregate_name: fact.aggregate,
         aggregate_identifier: fact.aggregateIdentifier,
