@@ -225,7 +225,7 @@ test("It should return all events from a snpashot only", async () => {
     }
   })
 
-  const facts = await factStore.findFromSnapshot(fact => {
+  const facts = await factStore.findFromLast(fact => {
     return fact.name === "user-snapshot"
   })
 
@@ -465,7 +465,7 @@ test("It should work with the SQLite implementation", async () => {
     }
   })
 
-  const factsWithSnapshot = await factStore.findFromSnapshot(fact => {
+  const factsWithSnapshot = await factStore.findFromLast(fact => {
     return fact.name === "user-snapshot"
   })
 
