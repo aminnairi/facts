@@ -25,6 +25,7 @@ export interface FactStore<Fact extends FactShape> {
   // TODO: return an async iterator
   findFromLast(accept: Accept<Fact>): Promise<Fact[]>
   register(listener: Query<Fact, unknown>): void
+  initialize(): Promise<void>
 }
 
 export interface Query<Fact extends FactShape, Data> {
@@ -84,6 +85,14 @@ export class MemoryFactStore<Fact extends FactShape> implements FactStore<Fact> 
 
     this.facts.set(key, fact)
   }
+
+  public async initialize(): Promise<void> {
+    this.facts.forEach(fact => {
+      this.queries.forEach(query => {
+        query.handle(fact)
+      })
+    })
+  }
 }
 
 export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> {
@@ -127,6 +136,23 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
 
   public register(listener: Query<Fact, unknown>): void {
     this.queries.add(listener);
+  }
+
+  public async initialize(): Promise<void> {
+    const statement = this.database.prepare("SELECT fact from facts")
+
+    for (const row of statement.iterate()) {
+      // TODO: add a parser for parsing correctly foreign objects
+      const fact = JSON.parse(String(row.fact)) as Fact
+
+      this.queries.forEach(query => {
+        query.handle(fact)
+      })
+    }
+  }
+
+  public close(): void {
+    this.database.close()
   }
 }
 
