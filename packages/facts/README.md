@@ -125,8 +125,10 @@ for (const todo of todos) {
 ## ✍️ Examples
 
 - [Fact store using the provided SQLite implementation](./examples/sqlite/store.ts)
+- [Fact store using the provided SQLite implementation with snapshotting](./examples/sqlite/snapshot.ts)
 - [Fact store using the provided RAM implementation](./examples/memory/store.ts)
 - [Query implemented using RAM](./examples/memory/query.ts)
+- [Query initialization using RAM](./examples/memory/initialization.ts)
 
 ## API
 
