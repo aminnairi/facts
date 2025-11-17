@@ -16,12 +16,12 @@ export class ConcurrencyError extends Error {
 }
 
 type Accept<Fact extends FactShape> = (fact: Fact) => boolean
-type IsSnapshot<Fact extends FactShape> = (fact: Fact) => boolean
+type Stop<Fact extends FactShape> = (fact: Fact) => boolean
 
 export interface FactStore<Fact extends FactShape> {
   save(fact: Fact): Promise<void | ConcurrencyError>
   // TODO: return an aysnc iterator
-  find(accept: Accept<Fact>): Promise<Fact[]>
+  find(stop: Stop<Fact>): Promise<Fact[]>
   // TODO: return an async iterator
   findFromSnapshot(isSnapshot: IsSnapshot<Fact>): Promise<Fact[]>
   register(listener: Query<Fact, unknown>): void
