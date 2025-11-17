@@ -24,7 +24,7 @@ implementing these patterns.
 - 100% TypeScript source-code & functional programming in mind
 - Ready for deployment in clusters thanks to optimistic locking
 - Database agnostic, can work with memory, files, SQL, NoSQL, IndexedDB, LocalStorage, ...
-- Event Sourcing inspired to prevent data loss and enable smarted analytics
+- Event Sourcing inspired to prevent data loss and enable smarter analytics
 - Query implementation for CQRS applications
 - Easy initialization of Queries from past events useful after application restart
 - No migration script required, evolve your data model as your project evolve
