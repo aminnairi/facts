@@ -130,8 +130,20 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
 
   public async findFromLast(stop: Stop<Fact>): Promise<Fact[]> {
     const statement = this.database.prepare("SELECT fact FROM facts ORDER BY rowid DESC");
-    const facts = statement.all().map((row: any) => JSON.parse(row.fact));
-    return until(facts, isSnapshot).reverse();
+    const facts: Fact[] = []
+
+    for (const row of statement.iterate()) {
+      // TODO: add a parser for parsing correctly foreign objects
+      const fact = JSON.parse(String(row.fact)) as Fact
+
+      facts.unshift(fact)
+
+      if (stop(fact)) {
+        break
+      }
+    }
+
+    return facts;
   }
 
   public register(listener: Query<Fact, unknown>): void {
