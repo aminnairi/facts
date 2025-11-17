@@ -499,4 +499,97 @@ test("It should work with the SQLite implementation", async () => {
       }
     }
   ])
+
+  factStore.close()
+})
+
+test("It should initialize the store correctly", async () => {
+  const factStore = new SqliteFactStore<UserFact>(":memory:")
+  const query = new MemoryUsersWithEmailQuery()
+
+  const aggregateIdentifier = randomUUID()
+  const identifier = randomUUID()
+
+  await factStore.save({
+    identifier,
+    name: "user-created",
+    sequence: 0,
+    version: 1,
+    aggregate: "user",
+    aggregateIdentifier,
+    date: new Date("2025-01-01"),
+    data: {
+      email: "init@domain.com",
+      password: "password"
+    }
+  })
+
+  factStore.register(query)
+
+  await factStore.initialize()
+
+  const users = await query.fetch()
+
+  expect(users).toStrictEqual([
+    {
+      email: "init@domain.com"
+    }
+  ])
+
+  factStore.close()
+})
+
+test("It should throw an error when using a closed store", async () => {
+  const factStore = new SqliteFactStore<UserFact>(":memory:")
+
+  factStore.close()
+
+  const error = await factStore.save({
+    identifier: randomUUID(),
+    name: "user-created",
+    sequence: 0,
+    version: 1,
+    aggregate: "user",
+    aggregateIdentifier: randomUUID(),
+    date: new Date(),
+    data: {
+      email: "test@domain.com",
+      password: "password"
+    }
+  })
+
+  expect(error).toBeInstanceOf(Error)
+})
+
+test("It should initialize the memory store correctly", async () => {
+  const factStore = new MemoryFactStore<UserFact>()
+  const query = new MemoryUsersWithEmailQuery()
+  const aggregateIdentifier = randomUUID()
+  const identifier = randomUUID()
+
+  await factStore.save({
+    identifier,
+    name: "user-created",
+    sequence: 0,
+    version: 1,
+    aggregate: "user",
+    aggregateIdentifier,
+    date: new Date("2025-01-01"),
+    data: {
+      email: "init@domain.com",
+      password: "password"
+    }
+  })
+
+  factStore.register(query)
+
+  await factStore.initialize()
+
+  const users = await query.fetch()
+
+  expect(users).toStrictEqual([
+    {
+      email: "init@domain.com"
+    }
+  ])
 })
