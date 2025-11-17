@@ -23,7 +23,7 @@ export interface FactStore<Fact extends FactShape> {
   // TODO: return an aysnc iterator
   find(stop: Stop<Fact>): Promise<Fact[]>
   // TODO: return an async iterator
-  findFromSnapshot(isSnapshot: IsSnapshot<Fact>): Promise<Fact[]>
+  findFromLast(accept: Accept<Fact>): Promise<Fact[]>
   register(listener: Query<Fact, unknown>): void
 }
 
@@ -67,8 +67,8 @@ export class MemoryFactStore<Fact extends FactShape> implements FactStore<Fact> 
     return Array.from(this.facts.values()).filter(accept)
   }
 
-  public async findFromSnapshot(isSnapshot: IsSnapshot<Fact>) {
-    return until(Array.from(this.facts.values()).reverse(), isSnapshot).reverse()
+  public async findFromLast(stop: Stop<Fact>) {
+    return until(Array.from(this.facts.values()).reverse(), stop).reverse()
   }
 
   public async save(fact: Fact): Promise<void | ConcurrencyError> {
@@ -119,7 +119,7 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
     return facts.filter(accept);
   }
 
-  public async findFromSnapshot(isSnapshot: (fact: Fact) => boolean): Promise<Fact[]> {
+  public async findFromLast(stop: Stop<Fact>): Promise<Fact[]> {
     const statement = this.database.prepare("SELECT fact FROM facts ORDER BY rowid DESC");
     const facts = statement.all().map((row: any) => JSON.parse(row.fact));
     return until(facts, isSnapshot).reverse();
