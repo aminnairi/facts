@@ -44,48 +44,13 @@ npm install @aminnairi/facts
 
 ```typescript
 import { MemoryFactStore } from "@aminnairi/facts";
-import { randomUUID } from "node:crypto"
+import { randomUUID } from "node:crypto";
+import { TodoFact, TodoAddedV1Fact } from "./facts";
 
-interface TodoAddedV1Fact {
-  identifier: string
-  name: "todo-added"
-  aggregate: "todo"
-  version: 1
-  date: Date
-  aggregateIdentifier: string
-  sequence: number
-  data: {
-    name: string
-    done: false
-  }
-}
+const factStore = new MemoryFactStore<TodoFact>();
+const query = new MemoryTodoQuery();
 
-interface TodoRemovedV1Fact {
-  identifier: string
-  name: "todo-removed"
-  aggregate: "todo"
-  version: 1
-  date: Date
-  aggregateIdentifier: string
-  sequence: number
-  data: {
-    name: string
-    done: false
-  }
-}
-
-interface TodoFact =
-  | TodoAddedV1Fact
-  | TodoRemovedV1Fact
-
-interface Todo {
-  description: string
-}
-
-const factStore = new MemoryFactStore<TodoFact>()
-const query = new MemoryTodoQuery()
-
-factStore.register(query)
+factStore.register(query);
 
 await factStore.save({
   identifier: randomUUID(),
@@ -97,9 +62,9 @@ await factStore.save({
   sequence: 0,
   data: {
     name: "Do the dishes",
-    done: false
-  }
-})
+    done: false,
+  },
+});
 
 await factStore.save({
   identifier: randomUUID(),
@@ -111,14 +76,14 @@ await factStore.save({
   sequence: 0,
   data: {
     name: "Do the dishes",
-    done: false
-  }
-})
+    done: false,
+  },
+});
 
-const todos = await query.fetch()
+const todos = await query.fetch();
 
 for (const todo of todos) {
-  console.log(todo.description)
+  console.log(todo.description);
 }
 ```
 
@@ -243,3 +208,4 @@ See [`SECURITY.md`](./SECURITY.md).
 ## License
 
 See [`LICENSE`](./LICENSE).
+
