@@ -49,7 +49,7 @@ import { TodoFact, TodoAddedV1Fact } from "./facts";
 
 const factStore = new MemoryFactStore<TodoFact>();
 const query = new MemoryTodoQuery();
-const aggregaetIdentifier = randomUUID();
+const streamIdentifier = randomUUID();
 
 factStore.register(query);
 
@@ -58,10 +58,12 @@ await factStore.save({
   name: "todo-added",
   version: 1,
   date: new Date(),
-  aggregate: "todo",
-  aggregateIdentifier,
-  sequence: 0,
-  data: {
+  stream: {
+    name: "todo",
+    identifier: streamIdentifier,
+  },
+  position: 0,
+  payload: {
     name: "Do the dishes",
     done: false,
   },
@@ -71,11 +73,13 @@ await factStore.save({
   identifier: randomUUID(),
   name: "todo-removed",
   version: 1,
-  aggregate: "todo",
   date: new Date(),
-  aggregateIdentifier,
-  sequence: 1,
-  data: null,
+  stream: {
+    name: "todo",
+    identifier: streamIdentifier,
+  },
+  position: 1,
+  payload: null,
 });
 
 const todos = await query.fetch();
@@ -105,17 +109,19 @@ interface FactShape {
   identifier: string;
   name: string;
   version: number;
-  sequence: number;
+  position: number;
   date: Date;
-  aggregate: string;
-  aggregateIdentifier: string;
-  data: unknown;
+  stream: {
+    name: string;
+    identifier: string;
+  };
+  payload: unknown;
 }
 ```
 
 ### ConcurrencyError
 
-This is a custom error class that is thrown when there is a sequence conflict
+This is a custom error class that is thrown when there is a position conflict
 when saving a fact, which is part of the optimistic locking mechanism.
 
 ```typescript
@@ -133,8 +139,9 @@ methods for saving and finding facts, and for registering queries.
 interface FactStore<Fact extends FactShape> {
   save(fact: Fact): Promise<void | ConcurrencyError>;
   find(accept: Accept<Fact>): Promise<Fact[]>;
-  findFromSnapshot(isSnapshot: IsSnapshot<Fact>): Promise<Fact[]>;
+  findFromLast(stop: Stop<Fact>): Promise<Fact[]>;
   register(listener: Query<Fact, unknown>): void;
+  initialize(): Promise<void>;
 }
 ```
 
@@ -154,7 +161,7 @@ interface Query<Fact extends FactShape, Data> {
 
 This is a utility function that takes an array and a stop condition, and
 returns a new array with all the elements until the stop condition is met. It's
-used by `findFromSnapshot`.
+used by `findFromLast`.
 
 ```typescript
 function until<Value>(
