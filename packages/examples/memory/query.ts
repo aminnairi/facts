@@ -6,10 +6,12 @@ interface TodoAddedV1Fact {
   date: Date
   name: "todo-added"
   version: 1
-  sequence: number
-  aggregate: "todo"
-  aggregateIdentifier: string
-  data: {
+  position: number
+  stream: {
+    name: "todo"
+    identifier: string
+  }
+  payload: {
     name: string
     done: boolean
   }
@@ -20,10 +22,12 @@ interface TodoRemovedV1Fact {
   date: Date
   name: "todo-removed"
   version: 1
-  sequence: number
-  aggregate: "todo"
-  aggregateIdentifier: string
-  data: null
+  position: number
+  stream: {
+    name: "todo"
+    identifier: string
+  }
+  payload: null
 }
 
 type TodoFact =
@@ -42,14 +46,14 @@ class MemoryDescribedTodoQuery implements Query<TodoFact, DescribedTodo[]> {
   public async handle(fact: TodoFact): Promise<void> {
     match(fact, {
       "todo-added": todoAddedFact => {
-        this.todos.set(fact.aggregateIdentifier, {
-          identifier: fact.aggregateIdentifier,
-          description: `[${todoAddedFact.data.done ? "Done" : "Todo"}] ${todoAddedFact.data.name}`,
+        this.todos.set(fact.stream.identifier, {
+          identifier: fact.stream.identifier,
+          description: `[${todoAddedFact.payload.done ? "Done" : "Todo"}] ${todoAddedFact.payload.name}`,
           createdAt: todoAddedFact.date
         })
       },
       "todo-removed": todoRemovedFact => {
-        this.todos.delete(todoRemovedFact.aggregateIdentifier)
+        this.todos.delete(todoRemovedFact.stream.identifier)
       }
     })
   }
@@ -65,14 +69,16 @@ const describedTodoQuery = new MemoryDescribedTodoQuery
 factStore.register(describedTodoQuery)
 
 let error = await factStore.save({
-  aggregate: "todo",
-  aggregateIdentifier: "123",
+  stream: {
+    name: "todo",
+    identifier: "123"
+  },
   name: "todo-added",
   identifier: "123",
   date: new Date(),
-  sequence: 0,
+  position: 0,
   version: 1,
-  data: {
+  payload: {
     name: "Do the dishes",
     done: false
   }
@@ -84,14 +90,16 @@ if (error instanceof Error) {
 }
 
 error = await factStore.save({
-  aggregate: "todo",
-  aggregateIdentifier: "456",
+  stream: {
+    name: "todo",
+    identifier: "456"
+  },
   name: "todo-added",
   identifier: "456",
-  sequence: 0,
+  position: 0,
   version: 1,
   date: new Date(),
-  data: {
+  payload: {
     name: "Publish this library",
     done: true
   }

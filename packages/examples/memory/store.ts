@@ -5,10 +5,12 @@ interface TodoAddedV1Fact {
   date: Date
   name: "todo-added"
   version: 1
-  sequence: number
-  aggregate: "todo"
-  aggregateIdentifier: string
-  data: {
+  position: number
+  stream: {
+    name: "todo"
+    identifier: string
+  }
+  payload: {
     name: string
     done: boolean
   }
@@ -19,10 +21,12 @@ interface TodoRemovedV1Fact {
   date: Date
   name: "todo-removed"
   version: 1
-  sequence: number
-  aggregate: "todo"
-  aggregateIdentifier: string
-  data: null
+  position: number
+  stream: {
+    name: "todo"
+    identifier: string
+  }
+  payload: null
 }
 
 type TodoFact =
@@ -32,14 +36,16 @@ type TodoFact =
 const factStore = new MemoryFactStore<TodoFact>
 
 const error = await factStore.save({
-  aggregate: "todo",
-  aggregateIdentifier: "123",
+  stream: {
+    name: "todo",
+    identifier: "123"
+  },
   name: "todo-added",
   identifier: "123",
   date: new Date(),
-  sequence: 0,
+  position: 0,
   version: 1,
-  data: {
+  payload: {
     name: "Do the dishes",
     done: false
   }

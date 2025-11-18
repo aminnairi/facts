@@ -4,12 +4,14 @@ import { SqliteFactStore } from "@aminnairi/facts";
 interface TodoAddedV1Fact {
   name: "todo-added"
   identifier: string
-  sequence: number
+  position: number
   version: 1
-  aggregate: "todo"
+  stream: {
+    name: "todo"
+    identifier: string
+  }
   date: Date
-  aggregateIdentifier: string
-  data: {
+  payload: {
     name: string
     done: boolean
   }
@@ -19,22 +21,26 @@ interface TodoRemovedV1Fact {
   name: "todo-removed"
   date: Date
   identifier: string
-  sequence: number
+  position: number
   version: 1
-  aggregate: "todo"
-  aggregateIdentifier: string
-  data: null
+  stream: {
+    name: "todo"
+    identifier: string
+  }
+  payload: null
 }
 
 interface TodoSnapshotV1Fact {
   name: "todo-snapshot"
   date: Date
   identifier: string
-  sequence: number
+  position: number
   version: 1
-  aggregate: "todo"
-  aggregateIdentifier: string
-  data: {
+  stream: {
+    name: "todo"
+    identifier: string
+  }
+  payload: {
     name: string
     done: boolean
   }
@@ -46,45 +52,51 @@ type TodoFact =
   | TodoSnapshotV1Fact
 
 const factStore = new SqliteFactStore<TodoFact>(":memory:")
-const aggregateIdentifier = randomUUID()
+const streamIdentifier = randomUUID()
 
 await factStore.save({
-  aggregate: "todo",
-  aggregateIdentifier,
+  stream: {
+    name: "todo",
+    identifier: streamIdentifier
+  },
   identifier: randomUUID(),
   date: new Date(),
   name: "todo-added",
-  sequence: 0,
+  position: 0,
   version: 1,
-  data: {
+  payload: {
     done: false,
     name: "Do the dishes"
   }
 })
 
 await factStore.save({
-  aggregate: "todo",
-  aggregateIdentifier,
+  stream: {
+    name: "todo",
+    identifier: streamIdentifier
+  },
   identifier: randomUUID(),
   date: new Date(),
   name: "todo-snapshot",
-  sequence: 1,
+  position: 1,
   version: 1,
-  data: {
+  payload: {
     name: "Do the dishes",
     done: false
   }
 })
 
 await factStore.save({
-  aggregate: "todo",
-  aggregateIdentifier,
+  stream: {
+    name: "todo",
+    identifier: streamIdentifier
+  },
   date: new Date(),
   identifier: randomUUID(),
   name: "todo-removed",
-  sequence: 2,
+  position: 2,
   version: 1,
-  data: null
+  payload: null
 })
 
 const facts = await factStore.findFromLast(fact => {

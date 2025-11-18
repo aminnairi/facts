@@ -7,10 +7,12 @@ interface UserCreatedV1Fact {
   name: "user-created"
   version: 1
   date: Date
-  sequence: number
-  aggregateIdentifier: string
-  aggregate: "user"
-  data: {
+  position: number
+  stream: {
+    name: "user"
+    identifier: string
+  }
+  payload: {
     email: string
     password: string
   }
@@ -21,10 +23,12 @@ interface UserDeletedV1Fact {
   name: "user-deleted"
   version: 1
   date: Date
-  sequence: number
-  aggregateIdentifier: string
-  aggregate: "user"
-  data: null
+  position: number
+  stream: {
+    name: "user"
+    identifier: string
+  }
+  payload: null
 }
 
 interface UserSnapshotV1Fact {
@@ -32,10 +36,12 @@ interface UserSnapshotV1Fact {
   name: "user-snapshot"
   date: Date
   version: 1
-  sequence: number
-  aggregateIdentifier: string
-  aggregate: "user"
-  data: {
+  position: number
+  stream: {
+    name: "user"
+    identifier: string
+  }
+  payload: {
     email: string
     password: string
   }[]
@@ -55,14 +61,14 @@ class MemoryUsersWithEmailQuery implements Query<UserFact, UserWithEmail[]> {
 
   public async handle(fact: UserFact): Promise<void> {
     if (fact.name === "user-created") {
-      this.usersWithEmail.set(fact.aggregateIdentifier, {
-        email: fact.data.email
+      this.usersWithEmail.set(fact.stream.identifier, {
+        email: fact.payload.email
       })
 
       return
     }
 
-    this.usersWithEmail.delete(fact.aggregateIdentifier)
+    this.usersWithEmail.delete(fact.stream.identifier)
   }
 
   public async fetch(): Promise<UserWithEmail[]> {
@@ -78,17 +84,19 @@ test("It should return all elements until another one", () => {
 test("It should return the events after adding them to the store", async () => {
   const factStore = new MemoryFactStore<UserCreatedV1Fact>
   const factIdentifier = randomUUID()
-  const aggregateIdentifier = randomUUID()
+  const streamIdentifier = randomUUID()
 
   await factStore.save({
     identifier: factIdentifier,
     name: "user-created",
-    sequence: 0,
+    position: 0,
     version: 1,
     date: new Date("2025-01-01"),
-    aggregateIdentifier: aggregateIdentifier,
-    aggregate: "user",
-    data: {
+    stream: {
+      name: "user",
+      identifier: streamIdentifier
+    },
+    payload: {
       email: "email@domain.com",
       password: "supersecret"
     }
@@ -100,12 +108,14 @@ test("It should return the events after adding them to the store", async () => {
     {
       identifier: factIdentifier,
       name: "user-created",
-      sequence: 0,
+      position: 0,
       version: 1,
       date: new Date("2025-01-01"),
-      aggregateIdentifier: aggregateIdentifier,
-      aggregate: "user",
-      data: {
+      stream: {
+        name: "user",
+        identifier: streamIdentifier
+      },
+      payload: {
         email: "email@domain.com",
         password: "supersecret"
       }
@@ -128,12 +138,14 @@ test("It should return one event among many others", async () => {
   await factStore.save({
     identifier: factIdentifier,
     name: "user-created",
-    sequence: 0,
+    position: 0,
     version: 1,
     date: new Date("2025-01-01"),
-    aggregateIdentifier: firstUser.identifier,
-    aggregate: "user",
-    data: {
+    stream: {
+      name: "user",
+      identifier: firstUser.identifier
+    },
+    payload: {
       email: "first@domain.com",
       password: "supersecret"
     }
@@ -142,31 +154,35 @@ test("It should return one event among many others", async () => {
   await factStore.save({
     identifier: factIdentifier,
     name: "user-created",
-    sequence: 1,
+    position: 1,
     version: 1,
     date: new Date("2025-01-01"),
-    aggregateIdentifier: secondUser.identifier,
-    aggregate: "user",
-    data: {
+    stream: {
+      name: "user",
+      identifier: secondUser.identifier
+    },
+    payload: {
       email: "second@domain.com",
       password: "anotherpass"
     }
   })
 
   const facts = await factStore.find(fact => {
-    return fact.aggregateIdentifier === firstUser.identifier
+    return fact.stream.identifier === firstUser.identifier
   })
 
   expect(facts).toStrictEqual([
     {
       identifier: factIdentifier,
       name: "user-created",
-      sequence: 0,
+      position: 0,
       version: 1,
       date: new Date("2025-01-01"),
-      aggregateIdentifier: firstUser.identifier,
-      aggregate: "user",
-      data: {
+      stream: {
+        name: "user",
+        identifier: firstUser.identifier
+      },
+      payload: {
         email: "first@domain.com",
         password: "supersecret"
       }
@@ -177,19 +193,21 @@ test("It should return one event among many others", async () => {
 test("It should return all events from a snpashot only", async () => {
   const factStore = new MemoryFactStore<UserFact>
   const snapshotIdentifier = randomUUID()
-  const snapshotAggregateIdentifier = randomUUID()
+  const snapshotStreamIdentifier = randomUUID()
   const identifier = randomUUID()
-  const aggregateIdentifier = randomUUID()
+  const streamIdentifier = randomUUID()
 
   await factStore.save({
     identifier: randomUUID(),
     name: "user-created",
-    sequence: 0,
+    position: 0,
     version: 1,
     date: new Date("2025-01-01"),
-    aggregateIdentifier: randomUUID(),
-    aggregate: "user",
-    data: {
+    stream: {
+      name: "user",
+      identifier: randomUUID()
+    },
+    payload: {
       email: "first@domain.com",
       password: "supersecret"
     }
@@ -198,12 +216,14 @@ test("It should return all events from a snpashot only", async () => {
   await factStore.save({
     identifier: snapshotIdentifier,
     name: "user-snapshot",
-    sequence: 0,
+    position: 0,
     version: 1,
     date: new Date("2025-01-01"),
-    aggregateIdentifier: snapshotAggregateIdentifier,
-    aggregate: "user",
-    data: [
+    stream: {
+      name: "user",
+      identifier: snapshotStreamIdentifier
+    },
+    payload: [
       {
         email: "first@domain.com",
         password: "supersecret"
@@ -214,12 +234,14 @@ test("It should return all events from a snpashot only", async () => {
   await factStore.save({
     identifier,
     name: "user-created",
-    sequence: 0,
+    position: 0,
     version: 1,
-    aggregateIdentifier,
+    stream: {
+      name: "user",
+      identifier: streamIdentifier
+    },
     date: new Date("2025-01-01"),
-    aggregate: "user",
-    data: {
+    payload: {
       email: "second@domain.com",
       password: "anotherpass"
     }
@@ -233,12 +255,14 @@ test("It should return all events from a snpashot only", async () => {
     {
       identifier: snapshotIdentifier,
       name: "user-snapshot",
-      sequence: 0,
+      position: 0,
       version: 1,
-      aggregateIdentifier: snapshotAggregateIdentifier,
+      stream: {
+        name: "user",
+        identifier: snapshotStreamIdentifier
+      },
       date: new Date("2025-01-01"),
-      aggregate: "user",
-      data: [
+      payload: [
         {
           email: "first@domain.com",
           password: "supersecret"
@@ -248,12 +272,14 @@ test("It should return all events from a snpashot only", async () => {
     {
       identifier,
       name: "user-created",
-      sequence: 0,
+      position: 0,
       version: 1,
-      aggregateIdentifier,
+      stream: {
+        name: "user",
+        identifier: streamIdentifier
+      },
       date: new Date("2025-01-01"),
-      aggregate: "user",
-      data: {
+      payload: {
         email: "second@domain.com",
         password: "anotherpass"
       }
@@ -264,18 +290,20 @@ test("It should return all events from a snpashot only", async () => {
 test("It should return a concurrency error if two similar events are added", async () => {
   const factStore = new MemoryFactStore<UserFact>
   const identifier = randomUUID()
-  const aggregateIdentifier = randomUUID()
+  const streamIdentifier = randomUUID()
 
 
   const firstError = await factStore.save({
     identifier,
     name: "user-created",
-    sequence: 0,
+    position: 0,
     version: 1,
     date: new Date(),
-    aggregateIdentifier,
-    aggregate: "user",
-    data: {
+    stream: {
+      name: "user",
+      identifier: streamIdentifier
+    },
+    payload: {
       email: "first@domain.com",
       password: "supersecret"
     }
@@ -284,12 +312,14 @@ test("It should return a concurrency error if two similar events are added", asy
   const secondError = await factStore.save({
     identifier,
     name: "user-created",
-    sequence: 0,
+    position: 0,
     version: 1,
     date: new Date(),
-    aggregateIdentifier,
-    aggregate: "user",
-    data: {
+    stream: {
+      name: "user",
+      identifier: streamIdentifier
+    },
+    payload: {
       email: "second@domain.com",
       password: "anotherpass"
     }
@@ -302,20 +332,22 @@ test("It should return a concurrency error if two similar events are added", asy
 test("It should trigger the listen function for queries", async () => {
   const factStore = new MemoryFactStore<UserFact>
   const usersWithEmailQuery = new MemoryUsersWithEmailQuery
-  const aggregateIdentifier = randomUUID()
+  const streamIdentifier = randomUUID()
   const identifier = randomUUID()
 
   factStore.register(usersWithEmailQuery)
 
   await factStore.save({
-    aggregateIdentifier,
+    stream: {
+      name: "user",
+      identifier: streamIdentifier
+    },
     identifier,
-    aggregate: "user",
-    sequence: 0,
+    position: 0,
     date: new Date(),
     name: "user-created",
     version: 1,
-    data: {
+    payload: {
       email: "email@domain.com",
       password: "nothingtoseehere"
     }
@@ -331,24 +363,26 @@ test("It should trigger the listen function for queries", async () => {
 })
 
 test("It should match the correct fact", () => {
-  const aggregateIdentifier = randomUUID()
+  const streamIdentifier = randomUUID()
   const identifier = randomUUID()
 
   const fact = {
-    aggregate: "user",
-    aggregateIdentifier,
+    stream: {
+      name: "user",
+      identifier: streamIdentifier
+    },
     identifier,
     name: "user-created",
-    sequence: 0,
+    position: 0,
     version: 1,
     date: new Date("2025-01-01"),
-    data: {
+    payload: {
       email: "first@domain.com",
       password: "password"
     }
   } as UserFact
 
-  const output = match<boolean, UserFact>(fact, {
+  const output = match(fact, {
     "user-created": () => {
       return true
     },
@@ -366,7 +400,7 @@ test("It should match the correct fact", () => {
 test("It should work with the SQLite implementation", async () => {
   const factStore = new SqliteFactStore<UserFact>(":memory:")
   const identifier = randomUUID()
-  const aggregateIdentifier = randomUUID()
+  const streamIdentifier = randomUUID()
   const query = new MemoryUsersWithEmailQuery()
 
   factStore.register(query)
@@ -374,12 +408,14 @@ test("It should work with the SQLite implementation", async () => {
   let error = await factStore.save({
     identifier,
     name: "user-created",
-    sequence: 0,
+    position: 0,
     version: 1,
-    aggregate: "user",
-    aggregateIdentifier,
+    stream: {
+      name: "user",
+      identifier: streamIdentifier
+    },
     date: new Date("2025-01-01"),
-    data: {
+    payload: {
       email: "user@domain.com",
       password: "password"
     }
@@ -390,12 +426,14 @@ test("It should work with the SQLite implementation", async () => {
   error = await factStore.save({
     identifier: randomUUID(),
     name: "user-created",
-    sequence: 0,
+    position: 0,
     version: 1,
-    aggregate: "user",
-    aggregateIdentifier,
+    stream: {
+      name: "user",
+      identifier: streamIdentifier
+    },
     date: new Date(),
-    data: {
+    payload: {
       email: "user@domain.com",
       password: "password"
     }
@@ -417,12 +455,14 @@ test("It should work with the SQLite implementation", async () => {
     {
       identifier,
       name: "user-created",
-      sequence: 0,
+      position: 0,
       version: 1,
-      aggregate: "user",
-      aggregateIdentifier,
+      stream: {
+        name: "user",
+        identifier: streamIdentifier
+      },
       date: new Date("2025-01-01").toISOString(),
-      data: {
+      payload: {
         email: "user@domain.com",
         password: "password"
       }
@@ -430,17 +470,19 @@ test("It should work with the SQLite implementation", async () => {
   ])
 
   const snapshotIdentifier = randomUUID()
-  const snapshotAggregateIdentifier = randomUUID()
+  const snapshotStreamIdentifier = randomUUID()
 
   await factStore.save({
     identifier: snapshotIdentifier,
     name: "user-snapshot",
-    sequence: 0,
+    position: 0,
     version: 1,
-    aggregate: "user",
-    aggregateIdentifier: snapshotAggregateIdentifier,
+    stream: {
+      name: "user",
+      identifier: snapshotStreamIdentifier
+    },
     date: new Date("2025-01-01"),
-    data: [
+    payload: [
       {
         email: "user@domain.com",
         password: "password"
@@ -449,17 +491,19 @@ test("It should work with the SQLite implementation", async () => {
   })
 
   const anotherIdentifier = randomUUID()
-  const anotherAggregateIdentifier = randomUUID()
+  const anotherStreamIdentifier = randomUUID()
 
   await factStore.save({
     identifier: anotherIdentifier,
     name: "user-created",
-    sequence: 0,
+    position: 0,
     version: 1,
-    aggregate: "user",
-    aggregateIdentifier: anotherAggregateIdentifier,
+    stream: {
+      name: "user",
+      identifier: anotherStreamIdentifier
+    },
     date: new Date("2025-01-01"),
-    data: {
+    payload: {
       email: "another@domain.com",
       password: "pass"
     }
@@ -473,12 +517,14 @@ test("It should work with the SQLite implementation", async () => {
     {
       identifier: snapshotIdentifier,
       name: "user-snapshot",
-      sequence: 0,
+      position: 0,
       version: 1,
-      aggregate: "user",
-      aggregateIdentifier: snapshotAggregateIdentifier,
+      stream: {
+        name: "user",
+        identifier: snapshotStreamIdentifier
+      },
       date: new Date("2025-01-01").toISOString(),
-      data: [
+      payload: [
         {
           email: "user@domain.com",
           password: "password"
@@ -488,12 +534,14 @@ test("It should work with the SQLite implementation", async () => {
     {
       identifier: anotherIdentifier,
       name: "user-created",
-      sequence: 0,
+      position: 0,
       version: 1,
-      aggregate: "user",
-      aggregateIdentifier: anotherAggregateIdentifier,
+      stream: {
+        name: "user",
+        identifier: anotherStreamIdentifier
+      },
       date: new Date("2025-01-01").toISOString(),
-      data: {
+      payload: {
         email: "another@domain.com",
         password: "pass"
       }
@@ -507,18 +555,20 @@ test("It should initialize the store correctly", async () => {
   const factStore = new SqliteFactStore<UserFact>(":memory:")
   const query = new MemoryUsersWithEmailQuery()
 
-  const aggregateIdentifier = randomUUID()
+  const streamIdentifier = randomUUID()
   const identifier = randomUUID()
 
   await factStore.save({
     identifier,
     name: "user-created",
-    sequence: 0,
+    position: 0,
     version: 1,
-    aggregate: "user",
-    aggregateIdentifier,
+    stream: {
+      name: "user",
+      identifier: streamIdentifier
+    },
     date: new Date("2025-01-01"),
-    data: {
+    payload: {
       email: "init@domain.com",
       password: "password"
     }
@@ -547,12 +597,14 @@ test("It should throw an error when using a closed store", async () => {
   const error = await factStore.save({
     identifier: randomUUID(),
     name: "user-created",
-    sequence: 0,
+    position: 0,
     version: 1,
-    aggregate: "user",
-    aggregateIdentifier: randomUUID(),
+    stream: {
+      name: "user",
+      identifier: randomUUID()
+    },
     date: new Date(),
-    data: {
+    payload: {
       email: "test@domain.com",
       password: "password"
     }
@@ -564,18 +616,20 @@ test("It should throw an error when using a closed store", async () => {
 test("It should initialize the memory store correctly", async () => {
   const factStore = new MemoryFactStore<UserFact>()
   const query = new MemoryUsersWithEmailQuery()
-  const aggregateIdentifier = randomUUID()
+  const streamIdentifier = randomUUID()
   const identifier = randomUUID()
 
   await factStore.save({
     identifier,
     name: "user-created",
-    sequence: 0,
+    position: 0,
     version: 1,
-    aggregate: "user",
-    aggregateIdentifier,
+    stream: {
+      name: "user",
+      identifier: streamIdentifier
+    },
     date: new Date("2025-01-01"),
-    data: {
+    payload: {
       email: "init@domain.com",
       password: "password"
     }

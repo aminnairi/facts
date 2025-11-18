@@ -4,12 +4,14 @@ import { randomUUID } from "node:crypto"
 interface TodoAddedV1Fact {
   name: "todo-added"
   identifier: string
-  sequence: number
+  position: number
   version: 1
-  aggregate: "todo"
   date: Date
-  aggregateIdentifier: string
-  data: {
+  stream: {
+    name: "todo",
+    identifier: string
+  }
+  payload: {
     name: string
     done: boolean
   }
@@ -19,11 +21,13 @@ interface TodoRemovedV1Fact {
   name: "todo-removed"
   date: Date
   identifier: string
-  sequence: number
+  position: number
   version: 1
-  aggregate: "todo"
-  aggregateIdentifier: string
-  data: null
+  stream: {
+    name: "todo"
+    identifier: string
+  }
+  payload: null
 }
 
 type TodoFact =
@@ -43,15 +47,15 @@ class MemoryTodosQuery implements Query<TodoFact, Todo[]> {
   public async handle(fact: TodoFact): Promise<void> {
     match(fact, {
       "todo-added": todoAddedFact => {
-        this.todos.set(todoAddedFact.aggregateIdentifier, {
-          identifier: todoAddedFact.aggregateIdentifier,
-          name: todoAddedFact.data.name,
-          done: todoAddedFact.data.done,
+        this.todos.set(todoAddedFact.stream.identifier, {
+          identifier: todoAddedFact.stream.identifier,
+          name: todoAddedFact.payload.name,
+          done: todoAddedFact.payload.done,
           createdAt: todoAddedFact.date
         })
       },
       "todo-removed": todoRemovedFact => {
-        this.todos.delete(todoRemovedFact.aggregateIdentifier)
+        this.todos.delete(todoRemovedFact.stream.identifier)
       }
     })
   }
@@ -67,14 +71,16 @@ const factStore = new MemoryFactStore<TodoFact>(new Map([
   [
     identifier,
     {
-      aggregateIdentifier: identifier,
-      aggregate: "todo",
       name: "todo-added",
       date: new Date(),
       identifier: randomUUID(),
-      sequence: 0,
+      position: 0,
       version: 1,
-      data: {
+      stream: {
+        name: "todo",
+        identifier
+      },
+      payload: {
         done: false,
         name: "Do the dishes"
       }

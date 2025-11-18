@@ -4,11 +4,13 @@ export interface FactShape {
   identifier: string
   name: string
   version: number
-  sequence: number
+  position: number
   date: Date
-  aggregate: string
-  aggregateIdentifier: string
-  data: unknown
+  stream: {
+    name: string
+    identifier: string
+  }
+  payload: unknown
 }
 
 export class ConcurrencyError extends Error {
@@ -73,7 +75,7 @@ export class MemoryFactStore<Fact extends FactShape> implements FactStore<Fact> 
   }
 
   public async save(fact: Fact): Promise<void | ConcurrencyError> {
-    const key = `${fact.aggregate}-${fact.aggregateIdentifier}-${fact.sequence}`
+    const key = `${fact.stream.name}-${fact.stream.identifier}-${fact.position}`
 
     if (this.facts.has(key)) {
       return new ConcurrencyError
@@ -99,18 +101,18 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
   private readonly queries: Set<Query<Fact, unknown>> = new Set();
 
   public constructor(path: string, private readonly database: DatabaseSync = new DatabaseSync(path)) {
-    this.database.exec("CREATE TABLE IF NOT EXISTS facts(identifier TEXT PRIMARY KEY, aggregate_name TEXT NOT NULL, aggregate_identifier TEXT NOT NULL, sequence INTEGER NOT NULL, fact TEXT NOT NULL, UNIQUE(aggregate_name, aggregate_identifier, sequence))");
+    this.database.exec("CREATE TABLE IF NOT EXISTS facts(identifier TEXT PRIMARY KEY, stream_name TEXT NOT NULL, stream_identifier TEXT NOT NULL, position INTEGER NOT NULL, fact TEXT NOT NULL, UNIQUE(stream_name, stream_identifier, position))");
   }
 
   public async save(fact: Fact): Promise<void | ConcurrencyError> {
     try {
-      const statement = this.database.prepare("INSERT INTO facts(identifier, aggregate_name, aggregate_identifier, sequence, fact) VALUES(:identifier, :aggregate_name, :aggregate_identifier, :sequence, :fact)")
+      const statement = this.database.prepare("INSERT INTO facts(identifier, stream_name, stream_identifier, position, fact) VALUES(:identifier, :stream_name, :stream_identifier, :position, :fact)")
 
       statement.run({
         identifier: fact.identifier,
-        aggregate_name: fact.aggregate,
-        aggregate_identifier: fact.aggregateIdentifier,
-        sequence: fact.sequence,
+        stream_name: fact.stream.name,
+        stream_identifier: fact.stream.identifier,
+        position: fact.position,
         fact: JSON.stringify(fact)
       });
 
