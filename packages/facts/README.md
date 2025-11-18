@@ -46,6 +46,7 @@ npm install @aminnairi/facts
 import { MemoryFactStore } from "@aminnairi/facts";
 import { randomUUID } from "node:crypto";
 import { TodoFact, TodoAddedV1Fact } from "./facts";
+import { MemoryTodoQuery } from "./queries/todo.ts";
 
 const factStore = new MemoryFactStore<TodoFact>();
 const query = new MemoryTodoQuery();
