@@ -23,7 +23,7 @@ jobs:
         run: docker compose exec --user root node npm install
 
       - name: Run tests for @aminnairi/facts
-        run: docker compose exec --user root npm --workspace @aminnairi/facts test
+        run: docker compose exec --user root node npm --workspace @aminnairi/facts test
 
       - name: Stop the Docker services
         run: docker compose down --remove-orphans --volumes --timeout 0
