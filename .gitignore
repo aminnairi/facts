@@ -4,3 +4,4 @@
 **/*.sqlite
 **/.npm
 **/.node_repl_history
+**/.npmrc
