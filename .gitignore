@@ -2,3 +2,5 @@
 **/dist
 **/coverage
 **/*.sqlite
+**/.npm
+**/.node_repl_history
