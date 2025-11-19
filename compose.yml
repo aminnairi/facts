@@ -1,0 +1,9 @@
+services:
+  node:
+    image: node:25.2.1-alpine3.21
+    user: node
+    working_dir: /home/node
+    tty: true
+    stdin_open: true
+    volumes:
+      - .:/home/node
