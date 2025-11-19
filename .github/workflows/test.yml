@@ -3,10 +3,10 @@ name: Test
 on:
   push:
     branches:
-      - '**'
+      - "**"
   pull_request:
     branches:
-      - '**'
+      - "**"
 
 jobs:
   test:
@@ -16,14 +16,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
+      - name: Install the Docker services
+        run: docker compose up --detach
 
       - name: Install dependencies
-        run: npm install
+        run: docker compose exec node npm install
 
       - name: Run tests for @aminnairi/facts
-        run: npm test --workspace=@aminnairi/facts
+        run: docker compose exec npm test --workspace=@aminnairi/facts
+
+      - name: Stop the Docker services
+        run: docker compose down --remove-orphans --volumes --timeout 0
