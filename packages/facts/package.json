@@ -1,5 +1,4 @@
 {
-  "private": true,
   "name": "@aminnairi/facts",
   "description": "Database agnostic implementation of the Event Sourcing & CQRS design pattern",
   "version": "0.1.0",
