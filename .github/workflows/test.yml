@@ -20,10 +20,10 @@ jobs:
         run: docker compose up --detach
 
       - name: Install dependencies
-        run: docker compose exec node npm install
+        run: docker compose exec --user root node npm install
 
       - name: Run tests for @aminnairi/facts
-        run: docker compose exec npm --workspace @aminnairi/facts test
+        run: docker compose exec --user root npm --workspace @aminnairi/facts test
 
       - name: Stop the Docker services
         run: docker compose down --remove-orphans --volumes --timeout 0
