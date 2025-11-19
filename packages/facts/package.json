@@ -1,10 +1,10 @@
 {
-  "type": "module",
-  "name": "@aminnairi/facts",
-  "version": "0.1.0",
-  "license": "MIT",
-  "description": "Database agnostic implementation of the Event Sourcing & CQRS design pattern",
   "private": true,
+  "name": "@aminnairi/facts",
+  "description": "Database agnostic implementation of the Event Sourcing & CQRS design pattern",
+  "version": "0.1.0",
+  "homepage": "https://github.com/aminnairi/facts#readme",
+  "license": "MIT",
   "scripts": {
     "test": "vitest run --coverage"
   },
@@ -15,5 +15,27 @@
     "@types/node": "^24.10.1",
     "@vitest/coverage-v8": "^4.0.9",
     "tsx": "^4.20.6"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/aminnairi/facts/issues"
+  },
+  "author": {
+    "name": "Amin NAIRI",
+    "url": "https://github.com/aminnairi"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aminnairi/facts.git"
+  },
+  "engines": {
+    "node": ">=22.5.1"
+  },
+  "keywords": [
+    "event",
+    "sourcing",
+    "sqlite",
+    "fact",
+    "query",
+    "store"
+  ]
 }
