@@ -1,6 +1,6 @@
 # @aminnairi/facts
 
-[![GitHub License](https://img.shields.io/github/license/aminnairi/facts)](/LICENSE) [![NPM Version](https://img.shields.io/npm/v/%40aminnairi%2Ffacts)](https://www.npmjs.com/package/@aminnairi/facts) [![Test](https://github.com/aminnairi/facts/actions/workflows/test.yml/badge.svg?branch=production)](https://github.com/aminnairi/facts/actions/workflows/test.yml) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/aminnairi/facts/production)](https://app.codecov.io/github/aminnairi/facts)
+[![GitHub License](https://img.shields.io/github/license/aminnairi/facts)](/LICENSE) [![NPM Version](https://img.shields.io/npm/v/%40aminnairi%2Ffacts)](https://www.npmjs.com/package/@aminnairi/facts) [![Test](https://github.com/aminnairi/facts/actions/workflows/test.yml/badge.svg?branch=production)](https://github.com/aminnairi/facts/actions/workflows/test.yml) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/aminnairi/facts)](https://app.codecov.io/github/aminnairi/facts)
 
 Database agnostic implementation of the Event Sourcing & CQRS design pattern
 
