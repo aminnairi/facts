@@ -22,12 +22,18 @@ type Accept<Fact extends FactShape> = (fact: Fact) => boolean
 type Stop<Fact extends FactShape> = (fact: Fact) => boolean
 
 export interface FactStore<Fact extends FactShape> {
+  // TODO: return an unexpected error if something goes wrong
   save(fact: Fact): Promise<void | ConcurrencyError>
   // TODO: return an aysnc iterator
+  // TODO: return an error when the parser fails
+  // TODO: return an unexpected error if something goes wrong
   find(stop: Stop<Fact>): Promise<Fact[]>
   // TODO: return an async iterator
+  // TODO: return an error when the parser fails
+  // TODO: return an unexpected error if something goes wrong
   findFromLast(accept: Accept<Fact>): Promise<Fact[]>
   register(listener: Query<Fact, unknown>): void
+  // TODO: return an unexpected error if something goes wrong
   initialize(): Promise<void>
 }
 
@@ -101,9 +107,11 @@ export class MemoryFactStore<Fact extends FactShape> implements FactStore<Fact> 
 export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> {
   private readonly queries: Set<Query<Fact, unknown>> = new Set();
 
-  private constructor(private readonly database: DatabaseSync) { }
+  private constructor(private readonly database: DatabaseSync, private readonly parser: (fact: unknown) => Fact) { }
 
-  public static for<Fact extends FactShape>(path: string, database: DatabaseSync = new DatabaseSync(path)) {
+  public static for<Fact extends FactShape>(path: string, options: { parser: (fact: unknown) => Fact }) {
+    const database = new DatabaseSync(path)
+
     database.exec("CREATE TABLE IF NOT EXISTS migrations(identifier TEXT PRIMARY KEY, version UNSIGNED INTEGER NOT NULL)")
 
     const getLatestMigrationStatement = database.prepare("SELECT version FROM migrations ORDER BY version DESC LIMIT 1")
@@ -121,7 +129,7 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
       migrationStatement.run(migrationIdentifier, migrationVersion)
     }
 
-    return new SqliteFactStore<Fact>(database)
+    return new SqliteFactStore<Fact>(database, options.parser)
   }
 
   public async save(fact: Fact): Promise<void | ConcurrencyError> {
@@ -146,7 +154,7 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
 
   public async find(accept: (fact: Fact) => boolean = () => true): Promise<Fact[]> {
     const statement = this.database.prepare("SELECT fact FROM facts");
-    const facts = statement.all().map((row: any) => JSON.parse(row.fact));
+    const facts = statement.all().map((row: any) => this.parser(JSON.parse(row.fact)));
     return facts.filter(accept);
   }
 
@@ -155,8 +163,8 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
     const facts: Fact[] = []
 
     for (const row of statement.iterate()) {
-      // TODO: add a parser for parsing correctly foreign objects
-      const fact = JSON.parse(String(row.fact)) as Fact
+      const untrustedFact = JSON.parse(String(row.fact))
+      const fact = this.parser(untrustedFact)
 
       facts.unshift(fact)
 
@@ -176,8 +184,8 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
     const statement = this.database.prepare("SELECT fact from facts")
 
     for (const row of statement.iterate()) {
-      // TODO: add a parser for parsing correctly foreign objects
-      const fact = JSON.parse(String(row.fact)) as Fact
+      const untrustedFact = JSON.parse(String(row.fact))
+      const fact = this.parser(untrustedFact)
 
       this.queries.forEach(query => {
         query.handle(fact)
