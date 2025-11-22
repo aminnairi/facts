@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto"
 import { DatabaseSync } from "node:sqlite"
 
 export interface FactShape {
@@ -100,8 +101,27 @@ export class MemoryFactStore<Fact extends FactShape> implements FactStore<Fact> 
 export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> {
   private readonly queries: Set<Query<Fact, unknown>> = new Set();
 
-  public constructor(path: string, private readonly database: DatabaseSync = new DatabaseSync(path)) {
-    this.database.exec("CREATE TABLE IF NOT EXISTS facts(identifier TEXT PRIMARY KEY, stream_name TEXT NOT NULL, stream_identifier TEXT NOT NULL, position INTEGER NOT NULL, fact TEXT NOT NULL, UNIQUE(stream_name, stream_identifier, position))");
+  private constructor(private readonly database: DatabaseSync) { }
+
+  public static for<Fact extends FactShape>(path: string, database: DatabaseSync = new DatabaseSync(path)) {
+    database.exec("CREATE TABLE IF NOT EXISTS migrations(identifier TEXT PRIMARY KEY, version UNSIGNED INTEGER NOT NULL)")
+
+    const getLatestMigrationStatement = database.prepare("SELECT version FROM migrations ORDER BY version DESC LIMIT 1")
+
+    const latestMigrationRow = getLatestMigrationStatement.get()
+    const latestMigrationVersion = Number(latestMigrationRow?.version ?? 0) || 0
+
+    if (latestMigrationVersion < 1) {
+      database.exec("CREATE TABLE IF NOT EXISTS facts(identifier TEXT PRIMARY KEY, stream_name TEXT NOT NULL, stream_identifier TEXT NOT NULL, position INTEGER NOT NULL, fact TEXT NOT NULL, UNIQUE(stream_name, stream_identifier, position))");
+
+      const migrationStatement = database.prepare("INSERT INTO migrations(identifier, version) VALUES(?, ?)")
+      const migrationIdentifier = randomUUID()
+      const migrationVersion = 1
+
+      migrationStatement.run(migrationIdentifier, migrationVersion)
+    }
+
+    return new SqliteFactStore<Fact>(database)
   }
 
   public async save(fact: Fact): Promise<void | ConcurrencyError> {
