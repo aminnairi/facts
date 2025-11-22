@@ -1,5 +1,7 @@
 # @aminnairi/facts
 
+[![GitHub License](https://img.shields.io/github/license/aminnairi/facts)](/LICENSE) [![NPM Version](https://img.shields.io/npm/v/%40aminnairi%2Ffacts)](https://www.npmjs.com/package/@aminnairi/facts) [![Test](https://github.com/aminnairi/facts/actions/workflows/test.yml/badge.svg?branch=production)](https://github.com/aminnairi/facts/actions/workflows/test.yml) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/aminnairi/facts/production)](https://app.codecov.io/github/aminnairi/facts)
+
 Database agnostic implementation of the Event Sourcing & CQRS design pattern
 
 ## 🤔 Presentation
@@ -42,7 +44,8 @@ npm install tsx @aminnairi/facts zod
 ```
 
 Note: `zod` is used here and in some examples for robust parsing, but it is entirely optional. You can use any parsing library or method you prefer.
-```
+
+````
 
 ### Import the package
 
@@ -56,7 +59,7 @@ import {
 } from "@aminnairi/facts";
 import { randomUUID } from "crypto";
 import { z } from "zod";
-```
+````
 
 ### Define facts
 
@@ -245,7 +248,7 @@ You can retrieve facts from the store using `find` and `findFromLast`.
 
 ```typescript
 const result = await factStore.find(
-  (fact) => fact.stream.identifier === streamIdentifier
+  (fact) => fact.stream.identifier === streamIdentifier,
 );
 
 if (result instanceof Error) {
@@ -323,7 +326,6 @@ class UnexpectedError extends Error {
     super();
   }
 }
-}
 ```
 
 ### ParseError
@@ -345,10 +347,10 @@ This is an interface that defines the contract for a fact store.
 interface FactStore<Fact extends FactShape> {
   save(fact: Fact): Promise<void | ConcurrencyError>;
   find(
-    accept?: (fact: Fact) => boolean
+    accept?: (fact: Fact) => boolean,
   ): Promise<Fact[] | UnexpectedError | ParseError>;
   findFromLast(
-    stop: (fact: Fact) => boolean
+    stop: (fact: Fact) => boolean,
   ): Promise<Fact[] | UnexpectedError | ParseError>;
   register(listener: Query<Fact, unknown>): void;
   initialize(): Promise<void | ParseError | UnexpectedError>;
@@ -376,7 +378,7 @@ used by `findFromLast`.
 ```typescript
 function until<Value>(
   values: Value[],
-  stop: (value: Value) => boolean
+  stop: (value: Value) => boolean,
 ): Value[];
 ```
 
@@ -390,7 +392,7 @@ function match<Fact extends FactShape, Output>(
   fact: Fact,
   options: {
     [Key in Fact["name"]]: (fact: Extract<Fact, { name: Key }>) => Output;
-  }
+  },
 ): Output;
 ```
 
@@ -412,7 +414,7 @@ suitable for production environments. It is constructed using the `for` static m
 class SqliteFactStore<Fact extends FactShape> {
   public static for<Fact extends FactShape>(
     path: string,
-    options: { parser: (fact: unknown) => Fact | ParseError }
+    options: { parser: (fact: unknown) => Fact | ParseError },
   ): SqliteFactStore<Fact>;
 
   public close(): void;
@@ -430,3 +432,4 @@ See [`SECURITY.md`](/SECURITY.md).
 ## License
 
 See [`LICENSE`](./LICENSE).
+
