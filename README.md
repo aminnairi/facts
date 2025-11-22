@@ -45,8 +45,6 @@ npm install tsx @aminnairi/facts zod
 
 Note: `zod` is used here and in some examples for robust parsing, but it is entirely optional. You can use any parsing library or method you prefer.
 
-````
-
 ### Import the package
 
 ```typescript
@@ -59,7 +57,7 @@ import {
 } from "@aminnairi/facts";
 import { randomUUID } from "crypto";
 import { z } from "zod";
-````
+```
 
 ### Define facts
 
@@ -274,11 +272,11 @@ for (const todo of todos) {
 
 ## ✍️ Examples
 
-- [Fact store using the provided SQLite implementation](./examples/sqlite/store.ts)
-- [Fact store using the provided SQLite implementation with snapshotting](./examples/sqlite/snapshot.ts)
-- [Fact store using the provided RAM implementation](./examples/memory/store.ts)
-- [Query implemented using RAM](./examples/memory/query.ts)
-- [Query initialization using RAM](./examples/memory/initialization.ts)
+- [Fact store using the provided SQLite implementation](packages/examples/sqlite/store.ts)
+- [Fact store using the provided SQLite implementation with snapshotting](packages/examples/sqlite/snapshot.ts)
+- [Fact store using the provided RAM implementation](packages/examples/memory/store.ts)
+- [Query implemented using RAM](packages/examples/memory/query.ts)
+- [Query initialization using RAM](packages/examples/memory/initialization.ts)
 
 ## API
 
