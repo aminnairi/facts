@@ -29,31 +29,114 @@ implementing these patterns.
 - Easy initialization of Queries from past events useful after application restart
 - No migration script required, evolve your data model as your project evolve
 
-## ✋ Requirements
+## 💻 Usage
+
+### Install the requirements
 
 - [Node.js](https://nodejs.org)
 - [NPM](https://npmjs.com)
 
-## ⬇️ Installation
+### Install the packages
 
 ```bash
-npm install @aminnairi/facts
+npm install tsx @aminnairi/facts
 ```
 
-## 💻 Usage
+### Import the package
 
 ```typescript
 import { MemoryFactStore } from "@aminnairi/facts";
-import { randomUUID } from "node:crypto";
-import { TodoFact, TodoAddedV1Fact } from "./facts";
-import { MemoryTodoQuery } from "./queries/todo.ts";
+```
 
+### Define a fact
+
+```typescript
+interface TodoAddedV1Fact {
+  identifier: randomUUID(),
+  name: "todo-added",
+  version: 1,
+  date: new Date(),
+  position: 0,
+  stream: {
+    name: "todo",
+    identifier: streamIdentifier,
+  },
+  payload: {
+    name: "Do the dishes",
+    done: false,
+  },
+}
+
+interface TodoRemovedV1Fact {
+  identifier: randomUUID(),
+  name: "todo-removed",
+  version: 1,
+  date: new Date(),
+  position: 0,
+  stream: {
+    name: "todo",
+    identifier: streamIdentifier,
+  },
+  payload: null,
+}
+
+type TodoFact =
+  | TodoAddedV1Fact
+  | TodoRemovedV1Fact
+```
+
+### Initialize the store
+
+```typescript
 const factStore = new MemoryFactStore<TodoFact>();
-const query = new MemoryTodoQuery();
-const streamIdentifier = randomUUID();
+```
 
-factStore.register(query);
+### Define a query (optional)
 
+```typescript
+import type { Query } from "@aminnairi/facts";
+
+interface Todo {
+  identifier: string;
+  name: string;
+  done: boolean;
+}
+
+class MemoryTodosQuery implements Query<TodoFact, Todo[]> {
+  public constructor(private readonly todos: Map<string, Todo[]> = new Map()) {}
+
+  public handle(fact: TodoFact): void {
+    if (fact.name === "todo-added") {
+      this.todos.set(fact.stream.identifier, {
+        identifier: fact.stream.identifier,
+        name: fact.payload.name,
+        done: fact.payload.done,
+      });
+
+      return;
+    }
+
+    if (fact.name === "todo-removed") {
+      this.todos.delete(fact.stream.identifier);
+      return;
+    }
+  }
+
+  public async fetch(): Promise<Todo[]> {
+    return Array.from(this.todos.values());
+  }
+}
+
+const todosQuery = new MemoryTodosQuery();
+
+factStore.register(todosQuery);
+
+await factStore.initialize();
+```
+
+### Save facts
+
+```typescript
 await factStore.save({
   identifier: randomUUID(),
   name: "todo-added",
@@ -82,11 +165,25 @@ await factStore.save({
   position: 1,
   payload: null,
 });
+```
 
+### List facts
+
+```typescript
+const facts = factStore.find();
+
+for (const fact of facts) {
+  console.log(fact.name, fact.payload);
+}
+```
+
+### Fetch data (optional)
+
+```typescript
 const todos = await query.fetch();
 
 for (const todo of todos) {
-  console.log(todo.description);
+  console.log(todo.name);
 }
 ```
 
