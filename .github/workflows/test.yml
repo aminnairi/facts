@@ -33,3 +33,4 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           directory: packages/facts/coverage
+          override_branch: ${{ github.head_ref || github.ref_name }}
