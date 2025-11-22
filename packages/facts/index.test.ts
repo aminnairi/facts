@@ -1,6 +1,7 @@
 import { test, expect } from "vitest"
 import { ConcurrencyError, match, MemoryFactStore, Query, SqliteFactStore, until } from "."
 import { randomUUID } from "crypto"
+import { rm } from "node:fs/promises"
 
 interface UserCreatedV1Fact {
   identifier: string
@@ -398,7 +399,12 @@ test("It should match the correct fact", () => {
 })
 
 test("It should work with the SQLite implementation", async () => {
-  const factStore = new SqliteFactStore<UserFact>(":memory:")
+  const factStore = SqliteFactStore.for<UserFact>(":memory:")
+
+  if (factStore instanceof Error) {
+    throw factStore
+  }
+
   const identifier = randomUUID()
   const streamIdentifier = randomUUID()
   const query = new MemoryUsersWithEmailQuery()
@@ -552,7 +558,12 @@ test("It should work with the SQLite implementation", async () => {
 })
 
 test("It should initialize the store correctly", async () => {
-  const factStore = new SqliteFactStore<UserFact>(":memory:")
+  const factStore = SqliteFactStore.for<UserFact>(":memory:")
+
+  if (factStore instanceof Error) {
+    throw factStore
+  }
+
   const query = new MemoryUsersWithEmailQuery()
 
   const streamIdentifier = randomUUID()
@@ -590,7 +601,11 @@ test("It should initialize the store correctly", async () => {
 })
 
 test("It should throw an error when using a closed store", async () => {
-  const factStore = new SqliteFactStore<UserFact>(":memory:")
+  const factStore = SqliteFactStore.for<UserFact>(":memory:")
+
+  if (factStore instanceof Error) {
+    throw factStore
+  }
 
   factStore.close()
 
@@ -611,6 +626,24 @@ test("It should throw an error when using a closed store", async () => {
   })
 
   expect(error).toBeInstanceOf(Error)
+})
+
+test("It should be running as usual even if all migrations have been played", async () => {
+  const factStore = SqliteFactStore.for<UserFact>("test.sqlite")
+
+  if (factStore instanceof Error) {
+    throw factStore
+  }
+
+  factStore.close()
+
+  const factStore2 = SqliteFactStore.for<UserFact>("test.sqlite")
+
+  if (factStore2 instanceof Error) {
+    throw factStore2
+  }
+
+  rm("test.sqlite")
 })
 
 test("It should initialize the memory store correctly", async () => {
