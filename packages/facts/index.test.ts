@@ -1,57 +1,65 @@
 import { test, expect } from "vitest"
-import { ConcurrencyError, match, MemoryFactStore, Query, SqliteFactStore, until } from "."
+import { ConcurrencyError, FactShape, match, MemoryFactStore, Query, SqliteFactStore, until } from "."
 import { randomUUID } from "crypto"
 import { rm } from "node:fs/promises"
+import { z, ZodType } from "zod"
 
-interface UserCreatedV1Fact {
-  identifier: string
-  name: "user-created"
-  version: 1
-  date: Date
-  position: number
-  stream: {
-    name: "user"
-    identifier: string
-  }
-  payload: {
-    email: string
-    password: string
-  }
-}
+const userCreatedV1FactSchema = z.object({
+  identifier: z.string(),
+  name: z.literal("user-created"),
+  version: z.literal(1),
+  date: z.coerce.date(),
+  position: z.number(),
+  stream: z.object({
+    name: z.literal("user"),
+    identifier: z.string()
+  }),
+  payload: z.object({
+    email: z.string(),
+    password: z.string()
+  })
+}) satisfies ZodType<FactShape>
 
-interface UserDeletedV1Fact {
-  identifier: string
-  name: "user-deleted"
-  version: 1
-  date: Date
-  position: number
-  stream: {
-    name: "user"
-    identifier: string
-  }
-  payload: null
-}
+const userDeletedV1FactSchema = z.object({
+  identifier: z.string(),
+  name: z.literal("user-deleted"),
+  version: z.literal(1),
+  date: z.coerce.date(),
+  position: z.number(),
+  stream: z.object({
+    name: z.literal("user"),
+    identifier: z.string()
+  }),
+  payload: z.null()
+}) satisfies ZodType<FactShape>
 
-interface UserSnapshotV1Fact {
-  identifier: string
-  name: "user-snapshot"
-  date: Date
-  version: 1
-  position: number
-  stream: {
-    name: "user"
-    identifier: string
-  }
-  payload: {
-    email: string
-    password: string
-  }[]
-}
+const userSnapshotV1FactSchema = z.object({
+  identifier: z.string(),
+  name: z.literal("user-snapshot"),
+  date: z.coerce.date(),
+  version: z.literal(1),
+  position: z.number(),
+  stream: z.object({
+    name: z.literal("user"),
+    identifier: z.string()
+  }),
+  payload: z.object({
+    email: z.string(),
+    password: z.string()
+  })
+})
 
-type UserFact =
-  | UserCreatedV1Fact
-  | UserDeletedV1Fact
-  | UserSnapshotV1Fact
+const userFactSchema = z.union([
+  userSnapshotV1FactSchema,
+  userCreatedV1FactSchema,
+  userDeletedV1FactSchema
+])
+
+type UserCreatedV1Fact = z.infer<typeof userCreatedV1FactSchema>
+type UserDeletedV1Fact = z.infer<typeof userDeletedV1FactSchema>
+type UserSnapshotV1Fact = z.infer<typeof userSnapshotV1FactSchema>
+
+type UserFact = z.infer<typeof userFactSchema>
 
 interface UserWithEmail {
   email: string
@@ -224,12 +232,10 @@ test("It should return all events from a snpashot only", async () => {
       name: "user",
       identifier: snapshotStreamIdentifier
     },
-    payload: [
-      {
-        email: "first@domain.com",
-        password: "supersecret"
-      }
-    ]
+    payload: {
+      email: "first@domain.com",
+      password: "supersecret"
+    }
   })
 
   await factStore.save({
@@ -263,12 +269,10 @@ test("It should return all events from a snpashot only", async () => {
         identifier: snapshotStreamIdentifier
       },
       date: new Date("2025-01-01"),
-      payload: [
-        {
-          email: "first@domain.com",
-          password: "supersecret"
-        }
-      ]
+      payload: {
+        email: "first@domain.com",
+        password: "supersecret"
+      }
     },
     {
       identifier,
@@ -399,7 +403,9 @@ test("It should match the correct fact", () => {
 })
 
 test("It should work with the SQLite implementation", async () => {
-  const factStore = SqliteFactStore.for<UserFact>(":memory:")
+  const factStore = SqliteFactStore.for<UserFact>(":memory:", {
+    parser: userFactSchema.parse
+  })
 
   if (factStore instanceof Error) {
     throw factStore
@@ -467,7 +473,7 @@ test("It should work with the SQLite implementation", async () => {
         name: "user",
         identifier: streamIdentifier
       },
-      date: new Date("2025-01-01").toISOString(),
+      date: new Date("2025-01-01"),
       payload: {
         email: "user@domain.com",
         password: "password"
@@ -488,12 +494,10 @@ test("It should work with the SQLite implementation", async () => {
       identifier: snapshotStreamIdentifier
     },
     date: new Date("2025-01-01"),
-    payload: [
-      {
-        email: "user@domain.com",
-        password: "password"
-      }
-    ]
+    payload: {
+      email: "user@domain.com",
+      password: "password"
+    }
   })
 
   const anotherIdentifier = randomUUID()
@@ -529,13 +533,11 @@ test("It should work with the SQLite implementation", async () => {
         name: "user",
         identifier: snapshotStreamIdentifier
       },
-      date: new Date("2025-01-01").toISOString(),
-      payload: [
-        {
-          email: "user@domain.com",
-          password: "password"
-        }
-      ]
+      date: new Date("2025-01-01"),
+      payload: {
+        email: "user@domain.com",
+        password: "password"
+      }
     },
     {
       identifier: anotherIdentifier,
@@ -546,7 +548,7 @@ test("It should work with the SQLite implementation", async () => {
         name: "user",
         identifier: anotherStreamIdentifier
       },
-      date: new Date("2025-01-01").toISOString(),
+      date: new Date("2025-01-01"),
       payload: {
         email: "another@domain.com",
         password: "pass"
@@ -558,7 +560,9 @@ test("It should work with the SQLite implementation", async () => {
 })
 
 test("It should initialize the store correctly", async () => {
-  const factStore = SqliteFactStore.for<UserFact>(":memory:")
+  const factStore = SqliteFactStore.for<UserFact>(":memory:", {
+    parser: userFactSchema.parse
+  })
 
   if (factStore instanceof Error) {
     throw factStore
@@ -601,7 +605,9 @@ test("It should initialize the store correctly", async () => {
 })
 
 test("It should throw an error when using a closed store", async () => {
-  const factStore = SqliteFactStore.for<UserFact>(":memory:")
+  const factStore = SqliteFactStore.for<UserFact>(":memory:", {
+    parser: userFactSchema.parse
+  })
 
   if (factStore instanceof Error) {
     throw factStore
@@ -629,7 +635,9 @@ test("It should throw an error when using a closed store", async () => {
 })
 
 test("It should be running as usual even if all migrations have been played", async () => {
-  const factStore = SqliteFactStore.for<UserFact>("test.sqlite")
+  const factStore = SqliteFactStore.for<UserFact>("test.sqlite", {
+    parser: userFactSchema.parse
+  })
 
   if (factStore instanceof Error) {
     throw factStore
@@ -637,7 +645,9 @@ test("It should be running as usual even if all migrations have been played", as
 
   factStore.close()
 
-  const factStore2 = SqliteFactStore.for<UserFact>("test.sqlite")
+  const factStore2 = SqliteFactStore.for<UserFact>("test.sqlite", {
+    parser: userFactSchema.parse
+  })
 
   if (factStore2 instanceof Error) {
     throw factStore2
