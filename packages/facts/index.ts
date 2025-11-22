@@ -18,23 +18,29 @@ export class ConcurrencyError extends Error {
   public override readonly name = "ConcurrencyError"
 }
 
+export class UnexpectedError extends Error {
+  public override readonly name = "UnexpectedError"
+
+  public constructor(public readonly error: unknown) {
+    super()
+  }
+}
+
+export class ParseError extends Error {
+  public override readonly name = "ParseError"
+}
+
 type Accept<Fact extends FactShape> = (fact: Fact) => boolean
 type Stop<Fact extends FactShape> = (fact: Fact) => boolean
 
 export interface FactStore<Fact extends FactShape> {
-  // TODO: return an unexpected error if something goes wrong
   save(fact: Fact): Promise<void | ConcurrencyError>
   // TODO: return an aysnc iterator
-  // TODO: return an error when the parser fails
-  // TODO: return an unexpected error if something goes wrong
-  find(stop: Stop<Fact>): Promise<Fact[]>
+  find(stop: Stop<Fact>): Promise<UnexpectedError | ParseError | Fact[]>
   // TODO: return an async iterator
-  // TODO: return an error when the parser fails
-  // TODO: return an unexpected error if something goes wrong
-  findFromLast(accept: Accept<Fact>): Promise<Fact[]>
+  findFromLast(accept: Accept<Fact>): Promise<UnexpectedError | ParseError | Fact[]>
   register(listener: Query<Fact, unknown>): void
-  // TODO: return an unexpected error if something goes wrong
-  initialize(): Promise<void>
+  initialize(): Promise<void | ParseError | UnexpectedError>
 }
 
 export interface Query<Fact extends FactShape, Data> {
@@ -107,9 +113,9 @@ export class MemoryFactStore<Fact extends FactShape> implements FactStore<Fact> 
 export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> {
   private readonly queries: Set<Query<Fact, unknown>> = new Set();
 
-  private constructor(private readonly database: DatabaseSync, private readonly parser: (fact: unknown) => Fact) { }
+  private constructor(private readonly database: DatabaseSync, private readonly parser: (fact: unknown) => Fact | ParseError) { }
 
-  public static for<Fact extends FactShape>(path: string, options: { parser: (fact: unknown) => Fact }) {
+  public static for<Fact extends FactShape>(path: string, options: { parser: (fact: unknown) => Fact | ParseError }) {
     const database = new DatabaseSync(path)
 
     database.exec("CREATE TABLE IF NOT EXISTS migrations(identifier TEXT PRIMARY KEY, version UNSIGNED INTEGER NOT NULL)")
@@ -152,44 +158,78 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
     }
   }
 
-  public async find(accept: (fact: Fact) => boolean = () => true): Promise<Fact[]> {
-    const statement = this.database.prepare("SELECT fact FROM facts");
-    const facts = statement.all().map((row: any) => this.parser(JSON.parse(row.fact)));
-    return facts.filter(accept);
+  public async find(accept: (fact: Fact) => boolean = () => true): Promise<UnexpectedError | ParseError | Fact[]> {
+    try {
+      const acceptedFacts: Fact[] = []
+      const statement = this.database.prepare("SELECT fact FROM facts");
+      const untrustedFacts = statement.all()
+
+      for (const untrustedFact of untrustedFacts) {
+        const fact = this.parser(JSON.parse(String(untrustedFact.fact)))
+
+        if (fact instanceof ParseError) {
+          return fact
+        }
+
+        if (accept(fact)) {
+          acceptedFacts.push(fact)
+        }
+      }
+
+      return acceptedFacts
+    } catch (error) {
+      return new UnexpectedError(error)
+    }
   }
 
-  public async findFromLast(stop: Stop<Fact>): Promise<Fact[]> {
-    const statement = this.database.prepare("SELECT fact FROM facts ORDER BY rowid DESC");
-    const facts: Fact[] = []
+  public async findFromLast(stop: Stop<Fact>): Promise<UnexpectedError | ParseError | Fact[]> {
+    try {
+      const statement = this.database.prepare("SELECT fact FROM facts ORDER BY rowid DESC");
+      const facts: Fact[] = []
 
-    for (const row of statement.iterate()) {
-      const untrustedFact = JSON.parse(String(row.fact))
-      const fact = this.parser(untrustedFact)
+      for (const row of statement.iterate()) {
+        const untrustedFact = JSON.parse(String(row.fact))
+        const fact = this.parser(untrustedFact)
 
-      facts.unshift(fact)
+        if (fact instanceof ParseError) {
+          return fact
+        }
 
-      if (stop(fact)) {
-        break
+        facts.unshift(fact)
+
+        if (stop(fact)) {
+          break
+        }
       }
-    }
 
-    return facts;
+      return facts;
+    } catch (error) {
+      return new UnexpectedError(error)
+    }
   }
 
   public register(listener: Query<Fact, unknown>): void {
     this.queries.add(listener);
   }
 
-  public async initialize(): Promise<void> {
-    const statement = this.database.prepare("SELECT fact from facts")
+  public async initialize(): Promise<void | ParseError | UnexpectedError> {
+    try {
+      const statement = this.database.prepare("SELECT fact from facts")
 
-    for (const row of statement.iterate()) {
-      const untrustedFact = JSON.parse(String(row.fact))
-      const fact = this.parser(untrustedFact)
+      for (const row of statement.iterate()) {
+        const untrustedFact = JSON.parse(String(row.fact))
+        const fact = this.parser(untrustedFact)
 
-      this.queries.forEach(query => {
-        query.handle(fact)
-      })
+        if (fact instanceof ParseError) {
+          return fact
+        }
+
+        this.queries.forEach(query => {
+          query.handle(fact)
+        })
+      }
+    } catch (error) {
+      return new UnexpectedError(error)
     }
   }
 
