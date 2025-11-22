@@ -2,6 +2,8 @@
 
 Database agnostic implementation of the Event Sourcing & CQRS design pattern
 
+[![GitHub License](https://img.shields.io/github/license/aminnairi/facts)](/LICENSE) [![NPM Version](https://img.shields.io/npm/v/%40aminnairi%2Ffacts)](https://www.npmjs.com/package/@aminnairi/facts) [![Test](https://github.com/aminnairi/facts/actions/workflows/test.yml/badge.svg?branch=production)](https://github.com/aminnairi/facts/actions/workflows/test.yml)
+
 ## 🤔 Presentation
 
 Some businesses have the obligation to store data in a never ending stream of
