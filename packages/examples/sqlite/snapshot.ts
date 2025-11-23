@@ -8,10 +8,8 @@ const todoAddedV1FactSchema = z.object({
   position: z.number(),
   version: z.literal(1),
   date: z.coerce.date(),
-  stream: z.object({
-    name: z.literal("todo"),
-    identifier: z.string()
-  }),
+  streamName: z.literal("todo"),
+  streamIdentifier: z.string(),
   payload: z.object({
     name: z.string(),
     done: z.boolean()
@@ -25,10 +23,8 @@ const todoRemovedV1FactSchema = z.object({
   position: z.number(),
   version: z.literal(1),
   payload: z.null(),
-  stream: z.object({
-    name: z.literal("todo"),
-    identifier: z.string()
-  })
+  streamName: z.literal("todo"),
+  streamIdentifier: z.string()
 }) satisfies ZodType<FactShape>
 
 const todoSnapshotV1FactSchema = z.object({
@@ -37,10 +33,8 @@ const todoSnapshotV1FactSchema = z.object({
   identifier: z.string(),
   position: z.number(),
   version: z.literal(1),
-  stream: z.object({
-    name: z.literal("todo"),
-    identifier: z.string()
-  }),
+  streamName: z.literal("todo"),
+  streamIdentifier: z.string(),
   payload: z.object({
     name: z.string(),
     done: z.boolean()
@@ -69,10 +63,8 @@ const factStore = SqliteFactStore.for<TodoFact>(":memory:", {
 const streamIdentifier = randomUUID()
 
 await factStore.save({
-  stream: {
-    name: "todo",
-    identifier: streamIdentifier
-  },
+  streamName: "todo",
+  streamIdentifier: streamIdentifier,
   identifier: randomUUID(),
   date: new Date(),
   name: "todo-added",
@@ -85,10 +77,8 @@ await factStore.save({
 })
 
 await factStore.save({
-  stream: {
-    name: "todo",
-    identifier: streamIdentifier
-  },
+  streamName: "todo",
+  streamIdentifier: streamIdentifier,
   identifier: randomUUID(),
   date: new Date(),
   name: "todo-snapshot",
@@ -101,10 +91,8 @@ await factStore.save({
 })
 
 await factStore.save({
-  stream: {
-    name: "todo",
-    identifier: streamIdentifier
-  },
+  streamName: "todo",
+  streamIdentifier: streamIdentifier,
   date: new Date(),
   identifier: randomUUID(),
   name: "todo-removed",
