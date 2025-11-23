@@ -168,6 +168,24 @@ export interface Command<Fact extends FactShape> {
   listen(listener: CommandListener<Fact>): void
 }
 
+export class MemoryCommand<Fact extends FactShape> implements Command<Fact> {
+  public constructor(private readonly listeners: Set<CommandListener<Fact>> = new Set) { }
+
+  public async send(fact: Fact) {
+    for (const listen of this.listeners) {
+      const error = await listen(fact)
+
+      if (error) {
+        return error
+      }
+    }
+  }
+
+  public listen(listener: CommandListener<Fact>) {
+    this.listeners.add(listener)
+  }
+}
+
 /**
  * Takes all the values from a list until the stop condition is met.
  *
