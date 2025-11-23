@@ -10,10 +10,8 @@ const userCreatedV1FactSchema = z.object({
   version: z.literal(1),
   date: z.coerce.date(),
   position: z.number(),
-  stream: z.object({
-    name: z.literal("user"),
-    identifier: z.string()
-  }),
+  streamName: z.literal("user"),
+  streamIdentifier: z.string(),
   payload: z.object({
     email: z.string(),
     password: z.string()
@@ -26,10 +24,8 @@ const userDeletedV1FactSchema = z.object({
   version: z.literal(1),
   date: z.coerce.date(),
   position: z.number(),
-  stream: z.object({
-    name: z.literal("user"),
-    identifier: z.string()
-  }),
+  streamName: z.literal("user"),
+  streamIdentifier: z.string(),
   payload: z.null()
 }) satisfies ZodType<FactShape>
 
@@ -39,10 +35,8 @@ const userSnapshotV1FactSchema = z.object({
   date: z.coerce.date(),
   version: z.literal(1),
   position: z.number(),
-  stream: z.object({
-    name: z.literal("user"),
-    identifier: z.string()
-  }),
+  streamName: z.literal("user"),
+  streamIdentifier: z.string(),
   payload: z.object({
     email: z.string(),
     password: z.string()
@@ -64,8 +58,6 @@ const zodParser = (fact: unknown): UserFact | ParseError => {
 };
 
 type UserCreatedV1Fact = z.infer<typeof userCreatedV1FactSchema>
-type UserDeletedV1Fact = z.infer<typeof userDeletedV1FactSchema>
-type UserSnapshotV1Fact = z.infer<typeof userSnapshotV1FactSchema>
 
 type UserFact = z.infer<typeof userFactSchema>
 
@@ -78,14 +70,14 @@ class MemoryUsersWithEmailQuery implements Query<UserFact, UserWithEmail[]> {
 
   public async handle(fact: UserFact): Promise<void> {
     if (fact.name === "user-created") {
-      this.usersWithEmail.set(fact.stream.identifier, {
+      this.usersWithEmail.set(fact.streamIdentifier, {
         email: fact.payload.email
       })
 
       return
     }
 
-    this.usersWithEmail.delete(fact.stream.identifier)
+    this.usersWithEmail.delete(fact.streamIdentifier)
   }
 
   public async fetch(): Promise<UserWithEmail[]> {
@@ -123,10 +115,8 @@ test("", async () => {
     position: 0,
     version: 1,
     date: new Date("2025-01-01"),
-    stream: {
-      name: "user",
-      identifier: streamIdentifier
-    },
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
     payload: {
       email: "email@domain.com",
       password: "supersecret"
@@ -142,10 +132,8 @@ test("", async () => {
       position: 0,
       version: 1,
       date: new Date("2025-01-01"),
-      stream: {
-        name: "user",
-        identifier: streamIdentifier
-      },
+      streamName: "user",
+      streamIdentifier: streamIdentifier,
       payload: {
         email: "email@domain.com",
         password: "supersecret"
@@ -172,10 +160,8 @@ test("It should return one event among many others", async () => {
     position: 0,
     version: 1,
     date: new Date("2025-01-01"),
-    stream: {
-      name: "user",
-      identifier: firstUser.identifier
-    },
+    streamName: "user",
+    streamIdentifier: firstUser.identifier,
     payload: {
       email: "first@domain.com",
       password: "supersecret"
@@ -188,10 +174,8 @@ test("It should return one event among many others", async () => {
     position: 1,
     version: 1,
     date: new Date("2025-01-01"),
-    stream: {
-      name: "user",
-      identifier: secondUser.identifier
-    },
+    streamName: "user",
+    streamIdentifier: secondUser.identifier,
     payload: {
       email: "second@domain.com",
       password: "anotherpass"
@@ -199,7 +183,7 @@ test("It should return one event among many others", async () => {
   })
 
   const facts = await factStore.find(fact => {
-    return fact.stream.identifier === firstUser.identifier
+    return fact.streamIdentifier === firstUser.identifier
   })
 
   expect(facts).toStrictEqual([
@@ -209,10 +193,8 @@ test("It should return one event among many others", async () => {
       position: 0,
       version: 1,
       date: new Date("2025-01-01"),
-      stream: {
-        name: "user",
-        identifier: firstUser.identifier
-      },
+      streamName: "user",
+      streamIdentifier: firstUser.identifier,
       payload: {
         email: "first@domain.com",
         password: "supersecret"
@@ -234,10 +216,8 @@ test("It should return all events from a snpashot only", async () => {
     position: 0,
     version: 1,
     date: new Date("2025-01-01"),
-    stream: {
-      name: "user",
-      identifier: randomUUID()
-    },
+    streamName: "user",
+    streamIdentifier: randomUUID(),
     payload: {
       email: "first@domain.com",
       password: "supersecret"
@@ -250,10 +230,8 @@ test("It should return all events from a snpashot only", async () => {
     position: 0,
     version: 1,
     date: new Date("2025-01-01"),
-    stream: {
-      name: "user",
-      identifier: snapshotStreamIdentifier
-    },
+    streamName: "user",
+    streamIdentifier: snapshotStreamIdentifier,
     payload: {
       email: "first@domain.com",
       password: "supersecret"
@@ -265,10 +243,8 @@ test("It should return all events from a snpashot only", async () => {
     name: "user-created",
     position: 0,
     version: 1,
-    stream: {
-      name: "user",
-      identifier: streamIdentifier
-    },
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
     date: new Date("2025-01-01"),
     payload: {
       email: "second@domain.com",
@@ -286,10 +262,8 @@ test("It should return all events from a snpashot only", async () => {
       name: "user-snapshot",
       position: 0,
       version: 1,
-      stream: {
-        name: "user",
-        identifier: snapshotStreamIdentifier
-      },
+      streamName: "user",
+      streamIdentifier: snapshotStreamIdentifier,
       date: new Date("2025-01-01"),
       payload: {
         email: "first@domain.com",
@@ -301,10 +275,8 @@ test("It should return all events from a snpashot only", async () => {
       name: "user-created",
       position: 0,
       version: 1,
-      stream: {
-        name: "user",
-        identifier: streamIdentifier
-      },
+      streamName: "user",
+      streamIdentifier: streamIdentifier,
       date: new Date("2025-01-01"),
       payload: {
         email: "second@domain.com",
@@ -326,10 +298,8 @@ test("It should return a concurrency error if two similar events are added", asy
     position: 0,
     version: 1,
     date: new Date(),
-    stream: {
-      name: "user",
-      identifier: streamIdentifier
-    },
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
     payload: {
       email: "first@domain.com",
       password: "supersecret"
@@ -342,10 +312,8 @@ test("It should return a concurrency error if two similar events are added", asy
     position: 0,
     version: 1,
     date: new Date(),
-    stream: {
-      name: "user",
-      identifier: streamIdentifier
-    },
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
     payload: {
       email: "second@domain.com",
       password: "anotherpass"
@@ -365,10 +333,8 @@ test("It should trigger the listen function for queries", async () => {
   factStore.register(usersWithEmailQuery)
 
   await factStore.save({
-    stream: {
-      name: "user",
-      identifier: streamIdentifier
-    },
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
     identifier,
     position: 0,
     date: new Date(),
@@ -394,10 +360,8 @@ test("It should match the correct fact", () => {
   const identifier = randomUUID()
 
   const fact = {
-    stream: {
-      name: "user",
-      identifier: streamIdentifier
-    },
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
     identifier,
     name: "user-created",
     position: 0,
@@ -444,10 +408,8 @@ test("It should work with the SQLite implementation", async () => {
     name: "user-created",
     position: 0,
     version: 1,
-    stream: {
-      name: "user",
-      identifier: streamIdentifier
-    },
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
     date: new Date("2025-01-01"),
     payload: {
       email: "user@domain.com",
@@ -462,10 +424,8 @@ test("It should work with the SQLite implementation", async () => {
     name: "user-created",
     position: 0,
     version: 1,
-    stream: {
-      name: "user",
-      identifier: streamIdentifier
-    },
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
     date: new Date(),
     payload: {
       email: "user@domain.com",
@@ -491,10 +451,8 @@ test("It should work with the SQLite implementation", async () => {
       name: "user-created",
       position: 0,
       version: 1,
-      stream: {
-        name: "user",
-        identifier: streamIdentifier
-      },
+      streamName: "user",
+      streamIdentifier: streamIdentifier,
       date: new Date("2025-01-01"),
       payload: {
         email: "user@domain.com",
@@ -514,10 +472,8 @@ test("It should work with the SQLite implementation", async () => {
     name: "user-snapshot",
     position: 0,
     version: 1,
-    stream: {
-      name: "user",
-      identifier: snapshotStreamIdentifier
-    },
+    streamName: "user",
+    streamIdentifier: snapshotStreamIdentifier,
     date: new Date("2025-01-01"),
     payload: {
       email: "user@domain.com",
@@ -533,10 +489,8 @@ test("It should work with the SQLite implementation", async () => {
     name: "user-created",
     position: 0,
     version: 1,
-    stream: {
-      name: "user",
-      identifier: anotherStreamIdentifier
-    },
+    streamName: "user",
+    streamIdentifier: anotherStreamIdentifier,
     date: new Date("2025-01-01"),
     payload: {
       email: "another@domain.com",
@@ -554,10 +508,8 @@ test("It should work with the SQLite implementation", async () => {
       name: "user-snapshot",
       position: 0,
       version: 1,
-      stream: {
-        name: "user",
-        identifier: snapshotStreamIdentifier
-      },
+      streamName: "user",
+      streamIdentifier: snapshotStreamIdentifier,
       date: new Date("2025-01-01"),
       payload: {
         email: "user@domain.com",
@@ -569,10 +521,8 @@ test("It should work with the SQLite implementation", async () => {
       name: "user-created",
       position: 0,
       version: 1,
-      stream: {
-        name: "user",
-        identifier: anotherStreamIdentifier
-      },
+      streamName: "user",
+      streamIdentifier: anotherStreamIdentifier,
       date: new Date("2025-01-01"),
       payload: {
         email: "another@domain.com",
@@ -603,10 +553,8 @@ test("It should initialize the store correctly", async () => {
     name: "user-created",
     position: 0,
     version: 1,
-    stream: {
-      name: "user",
-      identifier: streamIdentifier
-    },
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
     date: new Date("2025-01-01"),
     payload: {
       email: "init@domain.com",
@@ -645,10 +593,8 @@ test("It should throw an error when using a closed store", async () => {
     name: "user-created",
     position: 0,
     version: 1,
-    stream: {
-      name: "user",
-      identifier: randomUUID()
-    },
+    streamName: "user",
+    streamIdentifier: randomUUID(),
     date: new Date(),
     payload: {
       email: "test@domain.com",
@@ -692,10 +638,8 @@ test("It should initialize the memory store correctly", async () => {
     name: "user-created",
     position: 0,
     version: 1,
-    stream: {
-      name: "user",
-      identifier: streamIdentifier
-    },
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
     date: new Date("2025-01-01"),
     payload: {
       email: "init@domain.com",
@@ -822,10 +766,8 @@ test("It should return a concurrency error for sqlite", async () => {
     position: 0,
     version: 1,
     date: new Date(),
-    stream: {
-      name: "user",
-      identifier: streamIdentifier
-    },
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
     payload: {
       email: "first@domain.com",
       password: "supersecret"
@@ -838,10 +780,8 @@ test("It should return a concurrency error for sqlite", async () => {
     position: 0,
     version: 1,
     date: new Date(),
-    stream: {
-      name: "user",
-      identifier: streamIdentifier
-    },
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
     payload: {
       email: "second@domain.com",
       password: "anotherpass"
