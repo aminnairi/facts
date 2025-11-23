@@ -1,4 +1,4 @@
-import { FactShape, Command, CommandListener, MemoryFactStore, ConcurrencyError } from "@aminnairi/facts"
+import { FactShape, Command, CommandListener, MemoryFactStore, ConcurrencyError, MemoryCommand } from "@aminnairi/facts"
 import { randomUUID } from "crypto"
 
 interface TodoAddedV1Fact extends FactShape {
@@ -22,44 +22,8 @@ type TodoFact =
   | TodoAddedV1Fact
   | TodoRemovedV1Fact
 
-class AddTodoCommand implements Command<TodoAddedV1Fact> {
-  public constructor(private readonly listeners: Set<CommandListener<TodoAddedV1Fact>> = new Set) { }
-
-  public async send(fact: TodoAddedV1Fact): Promise<void | ConcurrencyError> {
-    for (const listen of this.listeners) {
-      const error = await listen(fact)
-
-      if (error instanceof Error) {
-        return error
-      }
-    }
-  }
-
-  public listen(listener: CommandListener<TodoAddedV1Fact>): void {
-    this.listeners.add(listener)
-  }
-}
-
-class RemoveTodoCommand implements Command<TodoRemovedV1Fact> {
-  public constructor(private readonly listeners: Set<CommandListener<TodoRemovedV1Fact>> = new Set) { }
-
-  public async send(fact: TodoRemovedV1Fact): Promise<void | ConcurrencyError> {
-    for (const listen of this.listeners) {
-      const error = await listen(fact)
-
-      if (error instanceof Error) {
-        return error
-      }
-    }
-  }
-
-  public listen(listener: CommandListener<TodoRemovedV1Fact>): void {
-    this.listeners.add(listener)
-  }
-}
-
-const addTodoCommand = new AddTodoCommand
-const removeTodoCommand = new RemoveTodoCommand
+const addTodoCommand = new MemoryCommand<TodoAddedV1Fact>
+const removeTodoCommand = new MemoryCommand<TodoRemovedV1Fact>
 const factStore = new MemoryFactStore<TodoFact>
 
 factStore.registerCommand(addTodoCommand)
