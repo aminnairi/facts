@@ -29,18 +29,13 @@ export interface FactShape {
    */
   date: Date
   /**
-   * The stream to which the fact belongs.
+   * The name of the stream.
    */
-  stream: {
-    /**
-     * The name of the stream.
-     */
-    name: string
-    /**
-     * The unique identifier of the stream.
-     */
-    identifier: string
-  }
+  streamName: string
+  /**
+   * The unique identifier of the stream.
+   */
+  streamIdentifier: string
   /**
    * The payload of the fact, containing the actual data.
    */
@@ -134,6 +129,8 @@ export interface FactStore<Fact extends FactShape> {
    */
   register(listener: Query<Fact, unknown>): void
 
+  registerCommand(command: Command<Fact>): void
+
   /**
    * Call the `handle` method of each query which have been registered using
    * the `register` method, for each facts that has been previously stored.
@@ -162,6 +159,13 @@ export interface Query<Fact extends FactShape, Data> {
    * Fetches the data that has been accumulated by the query.
    */
   fetch(): Promise<Data>
+}
+
+export type CommandListener<Fact extends FactShape> = (fact: Fact) => Promise<void | ConcurrencyError>
+
+export interface Command<Fact extends FactShape> {
+  send(fact: Fact): Promise<void | ConcurrencyError>
+  listen(listener: CommandListener<Fact>): void
 }
 
 /**
@@ -222,6 +226,12 @@ export class MemoryFactStore<Fact extends FactShape> implements FactStore<Fact> 
     private readonly queries: Set<Query<Fact, unknown>> = new Set()
   ) { }
 
+  registerCommand(command: Command<Fact>): void {
+    command.listen(fact => {
+      return this.save(fact)
+    })
+  }
+
   public register(query: Query<Fact, unknown>): void {
     this.queries.add(query)
   }
@@ -235,7 +245,7 @@ export class MemoryFactStore<Fact extends FactShape> implements FactStore<Fact> 
   }
 
   public async save(fact: Fact): Promise<void | ConcurrencyError> {
-    const key = `${fact.stream.name}-${fact.stream.identifier}-${fact.position}`
+    const key = `${fact.streamName}-${fact.streamIdentifier}-${fact.position}`
 
     if (this.facts.has(key)) {
       return new ConcurrencyError
@@ -275,6 +285,12 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
    */
   private constructor(private readonly database: DatabaseSync, private readonly parser: (fact: unknown) => Fact | ParseError) { }
 
+  registerCommand(command: Command<Fact>): void {
+    command.listen(fact => {
+      return this.save(fact)
+    })
+  }
+
   /**
    * Creates a new `SqliteFactStore` for the given database path.
    *
@@ -312,8 +328,8 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
 
       statement.run({
         identifier: fact.identifier,
-        stream_name: fact.stream.name,
-        stream_identifier: fact.stream.identifier,
+        stream_name: fact.streamName,
+        stream_identifier: fact.streamIdentifier,
         position: fact.position,
         fact: JSON.stringify(fact)
       });
