@@ -1,31 +1,19 @@
-import { MemoryFactStore } from "@aminnairi/facts"
+import { FactShape, MemoryFactStore } from "@aminnairi/facts"
 
-interface TodoAddedV1Fact {
-  identifier: string
-  date: Date
+interface TodoAddedV1Fact extends FactShape {
   name: "todo-added"
   version: 1
-  position: number
-  stream: {
-    name: "todo"
-    identifier: string
-  }
+  streamName: "todo"
   payload: {
     name: string
     done: boolean
   }
 }
 
-interface TodoRemovedV1Fact {
-  identifier: string
-  date: Date
+interface TodoRemovedV1Fact extends FactShape {
   name: "todo-removed"
   version: 1
-  position: number
-  stream: {
-    name: "todo"
-    identifier: string
-  }
+  streamName: "todo"
   payload: null
 }
 
@@ -36,10 +24,8 @@ type TodoFact =
 const factStore = new MemoryFactStore<TodoFact>
 
 const error = await factStore.save({
-  stream: {
-    name: "todo",
-    identifier: "123"
-  },
+  streamName: "todo",
+  streamIdentifier: "123",
   name: "todo-added",
   identifier: "123",
   date: new Date(),
