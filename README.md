@@ -40,23 +40,13 @@ Sourcing & CQRS design patterns while reducing the friction of implementation.
 ### Install the packages
 
 ```bash
-npm install tsx @aminnairi/facts zod
+npm install tsx @aminnairi/facts
 ```
 
-Note: `zod` is used here and in some examples for robust parsing, but it is entirely optional. You can use any parsing library or method you prefer.
+## Create the source file
 
-### Import the package
-
-```typescript
-import {
-  MemoryFactStore,
-  SqliteFactStore,
-  ParseError,
-  FactShape,
-  Query,
-} from "@aminnairi/facts";
-import { randomUUID } from "crypto";
-import { z } from "zod";
+```bash
+touch index.ts
 ```
 
 ### Define facts
@@ -226,6 +216,12 @@ const todos = await todosQuery.fetch();
 for (const todo of todos) {
   console.log(todo.name);
 }
+```
+
+## Run the script
+
+```bash
+npx tsx index.ts
 ```
 
 ## ✍️ Examples
