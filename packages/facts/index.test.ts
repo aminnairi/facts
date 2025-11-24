@@ -1,5 +1,5 @@
-import { test, expect } from "vitest"
-import { ConcurrencyError, FactShape, match, MemoryFactStore, ParseError, Query, SqliteFactStore, UnexpectedError, until } from "."
+import { test, expect, vi } from "vitest"
+import { ConcurrencyError, FactShape, match, MemoryCommand, MemoryFactStore, ParseError, Query, SqliteFactStore, UnexpectedError, until } from "."
 import { randomUUID } from "crypto"
 import { rm } from "node:fs/promises"
 import { z, ZodType } from "zod"
@@ -812,3 +812,189 @@ test("It should return a ParseError when initializing with a malformed fact", as
 
   factStore.close()
 });
+
+test("It should create a command correctly", () => {
+  const command = new MemoryCommand<UserCreatedV1Fact>
+
+  expect(command).toBeInstanceOf(MemoryCommand)
+})
+
+test("It should create a command with listeners correctly", async () => {
+  const command = new MemoryCommand<UserCreatedV1Fact>
+  const callback = vi.fn()
+
+  command.listen(callback)
+
+  const identifier = randomUUID()
+  const date = new Date()
+  const name = "user-created"
+  const streamName = "user"
+  const streamIdentifier = randomUUID()
+  const position = 0
+  const version = 1
+  const payload = {
+    email: "user@example.com",
+    password: "pass123"
+  }
+
+  const error = await command.send({
+    identifier,
+    date,
+    name,
+    payload,
+    position,
+    version,
+    streamIdentifier,
+    streamName
+  })
+
+  expect(callback).toHaveBeenCalledWith({
+    identifier,
+    date,
+    name,
+    payload,
+    position,
+    version,
+    streamIdentifier,
+    streamName
+  })
+
+  expect(error).toBeUndefined()
+})
+
+test("It should create a command with listeners correctly", async () => {
+  const command = new MemoryCommand<UserCreatedV1Fact>
+  const callback = vi.fn(async () => new ConcurrencyError)
+
+  command.listen(callback)
+
+  const identifier = randomUUID()
+  const date = new Date()
+  const name = "user-created"
+  const streamName = "user"
+  const streamIdentifier = randomUUID()
+  const position = 0
+  const version = 1
+  const payload = {
+    email: "user@example.com",
+    password: "pass123"
+  }
+
+  const error = await command.send({
+    identifier,
+    date,
+    name,
+    payload,
+    position,
+    version,
+    streamIdentifier,
+    streamName
+  })
+
+  expect(callback).toHaveBeenCalledWith({
+    identifier,
+    date,
+    name,
+    payload,
+    position,
+    version,
+    streamIdentifier,
+    streamName
+  })
+
+  expect(error).toBeInstanceOf(ConcurrencyError)
+})
+
+test("registerCommand should work as expected for the in memory fact store", async () => {
+  const factStore = new MemoryFactStore<UserFact>
+  const createUserCommand = new MemoryCommand<UserCreatedV1Fact>
+
+  factStore.registerCommand(createUserCommand)
+
+  const identifier = randomUUID()
+  const date = new Date()
+  const streamIdentifier = randomUUID()
+
+  const error = await createUserCommand.send({
+    date,
+    identifier,
+    name: "user-created",
+    position: 0,
+    streamIdentifier,
+    streamName: "user",
+    version: 1,
+    payload: {
+      email: "email@domain.com",
+      password: "pass123"
+    }
+  })
+
+  const facts = await factStore.find()
+
+  expect(error).toBeUndefined()
+
+  expect(facts).toStrictEqual([
+    {
+      date,
+      identifier,
+      name: "user-created",
+      position: 0,
+      streamIdentifier,
+      streamName: "user",
+      version: 1,
+      payload: {
+        email: "email@domain.com",
+        password: "pass123"
+      }
+    }
+  ])
+})
+
+
+test("registerCommand should work as expected for the sqlite fact store", async () => {
+  const factStore = SqliteFactStore.for<UserFact>(":memory:", {
+    parser: zodParser
+  })
+
+  const createUserCommand = new MemoryCommand<UserCreatedV1Fact>
+
+  factStore.registerCommand(createUserCommand)
+
+  const identifier = randomUUID()
+  const date = new Date()
+  const streamIdentifier = randomUUID()
+
+  const error = await createUserCommand.send({
+    date,
+    identifier,
+    name: "user-created",
+    position: 0,
+    streamIdentifier,
+    streamName: "user",
+    version: 1,
+    payload: {
+      email: "email@domain.com",
+      password: "pass123"
+    }
+  })
+
+  const facts = await factStore.find()
+
+  expect(error).toBeUndefined()
+
+  expect(facts).toStrictEqual([
+    {
+      date,
+      identifier,
+      name: "user-created",
+      position: 0,
+      streamIdentifier,
+      streamName: "user",
+      version: 1,
+      payload: {
+        email: "email@domain.com",
+        password: "pass123"
+      }
+    }
+  ])
+})
