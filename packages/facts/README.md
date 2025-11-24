@@ -26,7 +26,7 @@ Sourcing & CQRS design patterns while reducing the friction of implementation.
 - Ready for deployment in clusters thanks to optimistic locking
 - Database agnostic, use files, SQL, NoSQL, IndexedDB, LocalStorage, etc...
 - Event Sourcing inspired to prevent data loss and enable smarter analytics
-- Query implementation for CQRS applications
+- Query & Command implementation for CQRS applications
 - Easy initialization of Queries from past events useful after application restart
 - No migration script required, evolve your data model as your project evolve
 
@@ -40,23 +40,13 @@ Sourcing & CQRS design patterns while reducing the friction of implementation.
 ### Install the packages
 
 ```bash
-npm install tsx @aminnairi/facts zod
+npm install tsx @aminnairi/facts
 ```
 
-Note: `zod` is used here and in some examples for robust parsing, but it is entirely optional. You can use any parsing library or method you prefer.
+## Create the source file
 
-### Import the package
-
-```typescript
-import {
-  MemoryFactStore,
-  SqliteFactStore,
-  ParseError,
-  FactShape,
-  Query,
-} from "@aminnairi/facts";
-import { randomUUID } from "crypto";
-import { z } from "zod";
+```bash
+touch index.ts
 ```
 
 ### Define facts
@@ -64,15 +54,12 @@ import { z } from "zod";
 First, define the structure of your facts using TypeScript interfaces.
 
 ```typescript
-const streamIdentifier = randomUUID();
+import { FactShape } from "@aminnairi/facts";
 
 interface TodoAddedV1Fact extends FactShape {
   name: "todo-added";
   version: 1;
-  stream: {
-    name: "todo";
-    identifier: string;
-  };
+  streamName: "todo";
   payload: {
     name: string;
     done: boolean;
@@ -82,54 +69,11 @@ interface TodoAddedV1Fact extends FactShape {
 interface TodoRemovedV1Fact extends FactShape {
   name: "todo-removed";
   version: 1;
-  stream: {
-    name: "todo";
-    identifier: string;
-  };
+  streamName: "todo";
   payload: null;
 }
 
 type TodoFact = TodoAddedV1Fact | TodoRemovedV1Fact;
-```
-
-### Define a fact schema (optional, but recommended)
-
-For robust parsing, especially when using a persistent store like SQLite, it's highly recommended to define a schema for your facts using a library like `zod`. (Note: `zod` is used here as an example; any other parsing library or custom parsing logic can be used.)
-
-```typescript
-const TodoAddedV1FactSchema = z.object({
-  identifier: z.string().uuid(),
-  name: z.literal("todo-added"),
-  version: z.literal(1),
-  date: z.date(),
-  position: z.number().int().min(0),
-  stream: z.object({
-    name: z.literal("todo"),
-    identifier: z.string().uuid(),
-  }),
-  payload: z.object({
-    name: z.string(),
-    done: z.boolean(),
-  }),
-});
-
-const TodoRemovedV1FactSchema = z.object({
-  identifier: z.string().uuid(),
-  name: z.literal("todo-removed"),
-  version: z.literal(1),
-  date: z.date(),
-  position: z.number().int().min(0),
-  stream: z.object({
-    name: z.literal("todo"),
-    identifier: z.string().uuid(),
-  }),
-  payload: z.null(),
-});
-
-const TodoFactSchema = z.union([
-  TodoAddedV1FactSchema,
-  TodoRemovedV1FactSchema,
-]);
 ```
 
 ### Initialize the store
@@ -137,37 +81,18 @@ const TodoFactSchema = z.union([
 You can use the in-memory store for development and testing, or the SQLite store for production.
 
 ```typescript
-// In-memory store
+import { FactShape, MemoryFactStore } from "@aminnairi/facts";
+
 const factStore = new MemoryFactStore<TodoFact>();
-
-// SQLite store
-const factParser = (fact: unknown): TodoFact | ParseError => {
-  const json = JSON.parse(fact as string, (key, value) => {
-    if (key === "date" && typeof value === "string") {
-      return new Date(value);
-    }
-    return value;
-  });
-
-  const result = TodoFactSchema.safeParse(json);
-  if (!result.success) {
-    return new ParseError();
-  }
-  return result.data as TodoFact;
-};
-
-const sqliteFactStore = SqliteFactStore.for<TodoFact>("./todo.sqlite", {
-  parser: factParser,
-});
-
-// process.on("exit", () => sqliteFactStore.close());
 ```
 
-### Define a query (optional)
+### Define a query
 
 Queries are used to build read models from your facts.
 
 ```typescript
+import { Query, match } from "@aminnairi/facts";
+
 interface Todo {
   identifier: string;
   name: string;
@@ -178,17 +103,18 @@ class MemoryTodosQuery implements Query<TodoFact, Todo[]> {
   public constructor(private readonly todos: Map<string, Todo> = new Map()) {}
 
   public async handle(fact: TodoFact): Promise<void> {
-    if (fact.name === "todo-added") {
-      this.todos.set(fact.stream.identifier, {
-        identifier: fact.stream.identifier,
-        name: fact.payload.name,
-        done: fact.payload.done,
-      });
-    }
-
-    if (fact.name === "todo-removed") {
-      this.todos.delete(fact.stream.identifier);
-    }
+    match(fact, {
+      "tood-added": (todoAddedFact) => {
+        this.todos.set(fact.stream.identifier, {
+          identifier: fact.stream.identifier,
+          name: fact.payload.name,
+          done: fact.payload.done,
+        });
+      },
+      "todo-removed": (todoRemovedFact) => {
+        this.todos.delete(fact.stream.identifier);
+      },
+    });
   }
 
   public async fetch(): Promise<Todo[]> {
@@ -197,11 +123,29 @@ class MemoryTodosQuery implements Query<TodoFact, Todo[]> {
 }
 
 const todosQuery = new MemoryTodosQuery();
+```
+
+### Define commands
+
+```typescript
+import { MemoryCommand } from "@aminnairi/facts";
+
+const addTodoCommand = new MemoryCommand<TodoAddedV1Fact>();
+const removeTodoCommand = new MemoryCommand<todoRemovedFact>();
+```
+
+### Initialize the store
+
+```typescript
 factStore.register(todosQuery);
 
-const initResult = await factStore.initialize();
-if (initResult instanceof Error) {
-  console.error("Failed to initialize query:", initResult);
+factStore.registerCommand(addTodoCommand);
+factStore.registerCommand(removeTodoCommand);
+
+const error = await factStore.initialize();
+
+if (error instanceof Error) {
+  console.error("Failed to initialize queries:", error);
 }
 ```
 
@@ -210,7 +154,7 @@ if (initResult instanceof Error) {
 Save facts to the store. The `position` property is used for optimistic locking.
 
 ```typescript
-await factStore.save({
+await addTodoCommand.run({
   identifier: randomUUID(),
   name: "todo-added",
   version: 1,
@@ -226,7 +170,7 @@ await factStore.save({
   },
 });
 
-await factStore.save({
+await removeTodoCommand.run({
   identifier: randomUUID(),
   name: "todo-removed",
   version: 1,
@@ -245,20 +189,21 @@ await factStore.save({
 You can retrieve facts from the store using `find` and `findFromLast`.
 
 ```typescript
-const result = await factStore.find(
-  (fact) => fact.stream.identifier === streamIdentifier,
-);
+const result = await factStore.find((fact) => {
+  fact.stream.identifier === streamIdentifier;
+});
 
 if (result instanceof Error) {
   console.error("Failed to find facts:", result);
-} else {
-  for (const fact of result) {
-    console.log(fact.name, fact.payload);
-  }
+  process.exit(1);
+}
+
+for (const fact of result) {
+  console.log(fact.name, fact.payload);
 }
 ```
 
-### Fetch data (optional)
+### Fetch data
 
 Fetch the read model from your query.
 
@@ -268,6 +213,12 @@ const todos = await todosQuery.fetch();
 for (const todo of todos) {
   console.log(todo.name);
 }
+```
+
+## Run the script
+
+```bash
+npx tsx index.ts
 ```
 
 ## ✍️ Examples

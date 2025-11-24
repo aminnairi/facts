@@ -56,8 +56,6 @@ First, define the structure of your facts using TypeScript interfaces.
 ```typescript
 import { FactShape } from "@aminnairi/facts";
 
-const streamIdentifier = randomUUID();
-
 interface TodoAddedV1Fact extends FactShape {
   name: "todo-added";
   version: 1;
@@ -84,7 +82,6 @@ You can use the in-memory store for development and testing, or the SQLite store
 
 ```typescript
 import { FactShape, MemoryFactStore } from "@aminnairi/facts";
-import { ZodType, z } from "zod";
 
 const factStore = new MemoryFactStore<TodoFact>();
 ```
