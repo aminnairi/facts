@@ -1,32 +1,21 @@
-import { match, Query, MemoryFactStore } from "@aminnairi/facts";
+import { match, Query, MemoryFactStore, FactShape } from "@aminnairi/facts";
 import { randomUUID } from "node:crypto"
 
-interface TodoAddedV1Fact {
+interface TodoAddedV1Fact extends FactShape {
   name: "todo-added"
-  identifier: string
-  position: number
   version: 1
   date: Date
-  stream: {
-    name: "todo",
-    identifier: string
-  }
+  streamName: "todo",
   payload: {
     name: string
     done: boolean
   }
 }
 
-interface TodoRemovedV1Fact {
+interface TodoRemovedV1Fact extends FactShape {
   name: "todo-removed"
-  date: Date
-  identifier: string
-  position: number
   version: 1
-  stream: {
-    name: "todo"
-    identifier: string
-  }
+  streamName: "todo"
   payload: null
 }
 
@@ -47,15 +36,15 @@ class MemoryTodosQuery implements Query<TodoFact, Todo[]> {
   public async handle(fact: TodoFact): Promise<void> {
     match(fact, {
       "todo-added": todoAddedFact => {
-        this.todos.set(todoAddedFact.stream.identifier, {
-          identifier: todoAddedFact.stream.identifier,
+        this.todos.set(todoAddedFact.streamIdentifier, {
+          identifier: todoAddedFact.streamIdentifier,
           name: todoAddedFact.payload.name,
           done: todoAddedFact.payload.done,
           createdAt: todoAddedFact.date
         })
       },
       "todo-removed": todoRemovedFact => {
-        this.todos.delete(todoRemovedFact.stream.identifier)
+        this.todos.delete(todoRemovedFact.streamIdentifier)
       }
     })
   }
@@ -65,21 +54,19 @@ class MemoryTodosQuery implements Query<TodoFact, Todo[]> {
   }
 }
 
-const identifier = randomUUID()
+const streamIdentifier = randomUUID()
 
 const factStore = new MemoryFactStore<TodoFact>(new Map([
   [
-    identifier,
+    streamIdentifier,
     {
       name: "todo-added",
       date: new Date(),
       identifier: randomUUID(),
       position: 0,
       version: 1,
-      stream: {
-        name: "todo",
-        identifier
-      },
+      streamName: "todo",
+      streamIdentifier,
       payload: {
         done: false,
         name: "Do the dishes"
@@ -90,7 +77,7 @@ const factStore = new MemoryFactStore<TodoFact>(new Map([
 
 const query = new MemoryTodosQuery()
 
-factStore.register(query)
+factStore.registerQuery(query)
 
 await factStore.initialize()
 
