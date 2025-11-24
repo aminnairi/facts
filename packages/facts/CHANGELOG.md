@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2.0.0 - 2025-11-24
+
+- `register` method is now renamed to `registerQuery`
+- New `Command` interface for creating single actions
+- New `MemoryCommand` implementation of the `Command` interface
+- New method for registering commands: `registerCommand`
+- Property `stream.identifier` is now `streamIdentifier` for better inference
+- Property `stream.name` is now `streamName` for better inference
+- Removed the `stream` property from facts
+
 ## [1.1.0] - 2025-11-23
 
 ### Added
