@@ -134,7 +134,7 @@ const addTodoCommand = new MemoryCommand<TodoAddedV1Fact>();
 const removeTodoCommand = new MemoryCommand<todoRemovedFact>();
 ```
 
-### Initialize the store
+### Register queries & commands
 
 ```typescript
 factStore.register(todosQuery);
