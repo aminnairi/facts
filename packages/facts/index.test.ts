@@ -330,7 +330,7 @@ test("It should trigger the listen function for queries", async () => {
   const streamIdentifier = randomUUID()
   const identifier = randomUUID()
 
-  factStore.register(usersWithEmailQuery)
+  factStore.registerQuery(usersWithEmailQuery)
 
   await factStore.save({
     streamName: "user",
@@ -401,7 +401,7 @@ test("It should work with the SQLite implementation", async () => {
   const streamIdentifier = randomUUID()
   const query = new MemoryUsersWithEmailQuery()
 
-  factStore.register(query)
+  factStore.registerQuery(query)
 
   let error = await factStore.save({
     identifier,
@@ -562,7 +562,7 @@ test("It should initialize the store correctly", async () => {
     }
   })
 
-  factStore.register(query)
+  factStore.registerQuery(query)
 
   await factStore.initialize()
 
@@ -647,7 +647,7 @@ test("It should initialize the memory store correctly", async () => {
     }
   })
 
-  factStore.register(query)
+  factStore.registerQuery(query)
 
   await factStore.initialize()
 

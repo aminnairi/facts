@@ -127,8 +127,14 @@ export interface FactStore<Fact extends FactShape> {
    *
    * @param listener The query to register.
    */
-  register(listener: Query<Fact, unknown>): void
+  registerQuery(listener: Query<Fact, unknown>): void
 
+  /**
+   * Registers a function that will be triggered each time a command sends a
+   * fact, it will be intercepted by the store and saved, along with
+   * broadcasting the fact to queries
+   * @param command The command used to listen for emitted facts
+   */
   registerCommand(command: Command<Fact>): void
 
   /**
@@ -161,13 +167,30 @@ export interface Query<Fact extends FactShape, Data> {
   fetch(): Promise<Data>
 }
 
+/**
+ * A function that will be called when the command sends a fact, it will also
+ * be used by the store to broadcast any fact to other queries as well
+ */
 export type CommandListener<Fact extends FactShape> = (fact: Fact) => Promise<void | ConcurrencyError>
 
+/**
+ * A command is an action that can be performed on the store
+ */
 export interface Command<Fact extends FactShape> {
+  /**
+   * Send a fact to the store
+   */
   send(fact: Fact): Promise<void | ConcurrencyError>
+
+  /**
+   * Add a listener, which will listen for each fact sent by the command
+   */
   listen(listener: CommandListener<Fact>): void
 }
 
+/**
+ * An in-memory implementation of a command, using a set to store listeners
+ */
 export class MemoryCommand<Fact extends FactShape> implements Command<Fact> {
   public constructor(private readonly listeners: Set<CommandListener<Fact>> = new Set) { }
 
@@ -250,7 +273,7 @@ export class MemoryFactStore<Fact extends FactShape> implements FactStore<Fact> 
     })
   }
 
-  public register(query: Query<Fact, unknown>): void {
+  public registerQuery(query: Query<Fact, unknown>): void {
     this.queries.add(query)
   }
 
@@ -410,7 +433,7 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
     }
   }
 
-  public register(listener: Query<Fact, unknown>): void {
+  public registerQuery(listener: Query<Fact, unknown>): void {
     this.queries.add(listener);
   }
 
