@@ -247,7 +247,7 @@ export function until<Value>(values: Value[], stop: (value: Value) => boolean): 
  * @template Fact The shape of the facts that are matched.
  */
 export function match<Output, Fact extends FactShape>(fact: Fact, options: { [Key in Fact["name"]]: (fact: Extract<Fact, { name: Key }>) => Output }): Output {
-  return options[fact.name](fact)
+  return options[fact.name as Fact["name"]](fact as Extract<Fact, { name: Fact["name"] }>)
 }
 
 /**
