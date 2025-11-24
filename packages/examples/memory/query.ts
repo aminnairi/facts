@@ -95,8 +95,8 @@ const factStore = new MemoryFactStore<TodoFact>
 const describedTodoQuery = new MemoryDescribedTodoQuery
 const invoicesQuery = new MemoryInvoicesQuery
 
-factStore.register(describedTodoQuery)
-factStore.register(invoicesQuery)
+factStore.registerQuery(describedTodoQuery)
+factStore.registerQuery(invoicesQuery)
 
 let error = await factStore.save({
   streamName: "todo",
