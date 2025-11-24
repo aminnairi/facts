@@ -43,7 +43,7 @@ Sourcing & CQRS design patterns while reducing the friction of implementation.
 npm install tsx @aminnairi/facts
 ```
 
-## Create the source file
+### Create the source file
 
 ```bash
 touch index.ts
