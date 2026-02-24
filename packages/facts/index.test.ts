@@ -624,7 +624,7 @@ test("It should be running as usual even if all migrations have been played", as
     throw factStore2
   }
 
-  rm("test.sqlite")
+  await rm("test.sqlite")
 })
 
 test("It should initialize the memory store correctly", async () => {
@@ -675,6 +675,7 @@ test("It should return a ParseError when finding a malformed fact", async () => 
   db.exec(`INSERT INTO facts(identifier, stream_name, stream_identifier, position, fact) VALUES('id', 'user', 'sid', 0, '{"invalid":"json"}')`);
 
   const error = await factStore.find();
+
   expect(error).toBeInstanceOf(ParseError);
 
   factStore.close()
