@@ -43,7 +43,7 @@ Sourcing & CQRS design patterns while reducing the friction of implementation.
 npm install tsx @aminnairi/facts
 ```
 
-## Create the source file
+### Create the source file
 
 ```bash
 touch index.ts
@@ -60,6 +60,7 @@ interface TodoAddedV1Fact extends FactShape {
   name: "todo-added";
   version: 1;
   streamName: "todo";
+  streamIdentifier: string;
   payload: {
     name: string;
     done: boolean;
@@ -70,6 +71,7 @@ interface TodoRemovedV1Fact extends FactShape {
   name: "todo-removed";
   version: 1;
   streamName: "todo";
+  streamIdentifier: string;
   payload: null;
 }
 
@@ -104,15 +106,15 @@ class MemoryTodosQuery implements Query<TodoFact, Todo[]> {
 
   public async handle(fact: TodoFact): Promise<void> {
     match(fact, {
-      "tood-added": (todoAddedFact) => {
-        this.todos.set(fact.stream.identifier, {
-          identifier: fact.stream.identifier,
-          name: fact.payload.name,
-          done: fact.payload.done,
+      "todo-added": (todoAddedFact) => {
+        this.todos.set(todoAddedFact.streamIdentifier, {
+          identifier: todoAddedFact.streamIdentifier,
+          name: todoAddedFact.payload.name,
+          done: todoAddedFact.payload.done,
         });
       },
       "todo-removed": (todoRemovedFact) => {
-        this.todos.delete(fact.stream.identifier);
+        this.todos.delete(todoRemovedFact.streamIdentifier);
       },
     });
   }
@@ -131,13 +133,13 @@ const todosQuery = new MemoryTodosQuery();
 import { MemoryCommand } from "@aminnairi/facts";
 
 const addTodoCommand = new MemoryCommand<TodoAddedV1Fact>();
-const removeTodoCommand = new MemoryCommand<todoRemovedFact>();
+const removeTodoCommand = new MemoryCommand<TodoRemovedV1Fact>();
 ```
 
-### Initialize the store
+### Register queries & commands
 
 ```typescript
-factStore.register(todosQuery);
+factStore.registerQuery(todosQuery);
 
 factStore.registerCommand(addTodoCommand);
 factStore.registerCommand(removeTodoCommand);
@@ -154,15 +156,13 @@ if (error instanceof Error) {
 Save facts to the store. The `position` property is used for optimistic locking.
 
 ```typescript
-await addTodoCommand.run({
+await addTodoCommand.send({
   identifier: randomUUID(),
   name: "todo-added",
   version: 1,
   date: new Date(),
-  stream: {
-    name: "todo",
-    identifier: streamIdentifier,
-  },
+  streamName: "todo",
+  streamIdentifier: streamIdentifier,
   position: 0,
   payload: {
     name: "Do the dishes",
@@ -170,15 +170,13 @@ await addTodoCommand.run({
   },
 });
 
-await removeTodoCommand.run({
+await removeTodoCommand.send({
   identifier: randomUUID(),
   name: "todo-removed",
   version: 1,
   date: new Date(),
-  stream: {
-    name: "todo",
-    identifier: streamIdentifier,
-  },
+  streamName: "todo",
+  streamIdentifier: streamIdentifier,
   position: 1,
   payload: null,
 });
@@ -190,7 +188,7 @@ You can retrieve facts from the store using `find` and `findFromLast`.
 
 ```typescript
 const result = await factStore.find((fact) => {
-  fact.stream.identifier === streamIdentifier;
+  return fact.streamIdentifier === streamIdentifier;
 });
 
 if (result instanceof Error) {
@@ -243,10 +241,8 @@ interface FactShape {
   version: number;
   position: number;
   date: Date;
-  stream: {
-    name: string;
-    identifier: string;
-  };
+  streamName: string;
+  streamIdentifier: string;
   payload: unknown;
 }
 ```
@@ -295,13 +291,20 @@ This is an interface that defines the contract for a fact store.
 ```typescript
 interface FactStore<Fact extends FactShape> {
   save(fact: Fact): Promise<void | ConcurrencyError>;
+  find<DiscriminatedFact extends Fact>(
+    accept: (fact: Fact) => fact is DiscriminatedFact,
+  ): Promise<DiscriminatedFact[] | UnexpectedError | ParseError>;
   find(
     accept?: (fact: Fact) => boolean,
   ): Promise<Fact[] | UnexpectedError | ParseError>;
+  findFromLast<DiscriminatedFact extends Fact>(
+    stop: (fact: Fact) => fact is DiscriminatedFact,
+  ): Promise<DiscriminatedFact[] | UnexpectedError | ParseError>;
   findFromLast(
     stop: (fact: Fact) => boolean,
   ): Promise<Fact[] | UnexpectedError | ParseError>;
-  register(listener: Query<Fact, unknown>): void;
+  registerQuery(listener: Query<Fact, unknown>): void;
+  registerCommand(command: Command<Fact>): void;
   initialize(): Promise<void | ParseError | UnexpectedError>;
 }
 ```
@@ -316,6 +319,26 @@ interface Query<Fact extends FactShape, Data> {
   handle(fact: Fact): Promise<void>;
   fetch(): Promise<Data>;
 }
+```
+
+### Command
+
+This interface defines the contract for a command that can be used to send facts
+to the store.
+
+```typescript
+interface Command<Fact extends FactShape> {
+  send(fact: Fact): Promise<void | ConcurrencyError>;
+  listen(listener: (fact: Fact) => Promise<void | ConcurrencyError>): void;
+}
+```
+
+### MemoryCommand
+
+Create a command for sending facts in RAM.
+
+```typescript
+class MemoryCommand<Fact extends FactShape> implements Command<Fact>
 ```
 
 ### until
@@ -337,7 +360,7 @@ This is a utility function that provides a way to do pattern matching on a
 fact's `name` property.
 
 ```typescript
-function match<Fact extends FactShape, Output>(
+function match<Output, Fact extends FactShape>(
   fact: Fact,
   options: {
     [Key in Fact["name"]]: (fact: Extract<Fact, { name: Key }>) => Output;
