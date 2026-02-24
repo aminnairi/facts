@@ -1,4 +1,4 @@
-import { FactShape, MemoryFactStore } from "@aminnairi/facts"
+import { type FactShape, MemoryFactStore } from "@aminnairi/facts"
 
 interface TodoAddedV1Fact extends FactShape {
   name: "todo-added"
