@@ -1,5 +1,5 @@
 import { test, expect, vi } from "vitest"
-import { ConcurrencyError, FactShape, match, MemoryCommand, MemoryFactStore, ParseError, Query, SqliteFactStore, UnexpectedError, until } from "."
+import { ConcurrencyError, type FactShape, match, MemoryCommand, MemoryFactStore, ParseError, type Query, SqliteFactStore, UnexpectedError, until } from "."
 import { randomUUID } from "crypto"
 import { rm } from "node:fs/promises"
 import { z, ZodType } from "zod"
