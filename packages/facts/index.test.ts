@@ -1,8 +1,8 @@
 import { test, expect, vi } from "vitest"
 import { ConcurrencyError, type FactShape, match, MemoryCommand, MemoryFactStore, ParseError, type Query, SqliteFactStore, UnexpectedError, until } from "."
 import { randomUUID } from "crypto"
-import { rm } from "node:fs/promises"
 import { z, ZodType } from "zod"
+import { rm } from "node:fs/promises"
 
 const userCreatedV1FactSchema = z.object({
   identifier: z.string(),
