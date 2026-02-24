@@ -1,4 +1,4 @@
-import { FactShape, MemoryFactStore, MemoryCommand } from "@aminnairi/facts"
+import { type FactShape, MemoryFactStore, MemoryCommand } from "@aminnairi/facts"
 import { randomUUID } from "crypto"
 
 interface TodoAddedV1Fact extends FactShape {
