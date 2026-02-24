@@ -74,20 +74,6 @@ export class ParseError extends Error {
 }
 
 /**
- * Function used to filter out facts based on a custom condition, useful for
- * retrieving facts for a particular stream like user-123 or invoice-456.
- */
-type Accept<Fact extends FactShape> = (fact: Fact) => boolean
-
-/**
- * Function used to stop retrieving facts from the store, facts will be
- * retrieved from the most recent to the oldest, allowing you to stop at a
- * certain fact, useful for retrieving all facts until a snapshot has been
- * encountered.
- */
-type Stop<Fact extends FactShape> = (fact: Fact) => boolean
-
-/**
  * Represents a store for facts, which can be used to save and retrieve facts.
  *
  * @template Fact The shape of the facts that are stored.
@@ -109,7 +95,8 @@ export interface FactStore<Fact extends FactShape> {
    * @param accept A function that returns true if the fact should be included
    * in the result.
    */
-  find(accept: Accept<Fact>): Promise<UnexpectedError | ParseError | Fact[]>
+  find<DiscriminatedFact extends Fact>(accept: (fact: Fact) => fact is DiscriminatedFact): Promise<UnexpectedError | ParseError | DiscriminatedFact[]>
+  find(accept?: (fact: Fact) => boolean): Promise<UnexpectedError | ParseError | Fact[]>
 
   /**
    * Find a list of fact from the most recent to the oldest, allowing you to stop at a
@@ -118,7 +105,8 @@ export interface FactStore<Fact extends FactShape> {
    *
    * @param stop A function that returns true if the iteration should stop.
    */
-  findFromLast(stop: Stop<Fact>): Promise<UnexpectedError | ParseError | Fact[]>
+  findFromLast<DiscriminatedFact extends Fact>(stop: (fact: Fact) => fact is DiscriminatedFact): Promise<UnexpectedError | ParseError | DiscriminatedFact[]>
+  findFromLast(stop: (fact: Fact) => boolean): Promise<UnexpectedError | ParseError | Fact[]>
 
   /**
    * Saves a query in a local set of queries, which are then called each time a
@@ -140,8 +128,7 @@ export interface FactStore<Fact extends FactShape> {
   /**
    * Call the `handle` method of each query which have been registered using
    * the `register` method, for each facts that has been previously stored.
-   * Although this method has no usefulness when using the `MemoryFactStore`,
-   * it is useful to initialize a query state when using a persistent store
+   * Although this method has no usefulness when a query state when using a persistent store
    * from previous facts, like the `SqliteFactStore`.
    */
   initialize(): Promise<void | ParseError | UnexpectedError>
@@ -277,11 +264,15 @@ export class MemoryFactStore<Fact extends FactShape> implements FactStore<Fact> 
     this.queries.add(query)
   }
 
-  public async find(accept: Accept<Fact> = () => true): Promise<Fact[]> {
+  public find<DiscriminatedFact extends Fact>(accept: (fact: Fact) => fact is DiscriminatedFact): Promise<DiscriminatedFact[]>
+  public find(accept?: (fact: Fact) => boolean): Promise<Fact[]>
+  public async find(accept: (fact: Fact) => boolean = () => true): Promise<Fact[]> {
     return Array.from(this.facts.values()).filter(accept)
   }
 
-  public async findFromLast(stop: Stop<Fact>) {
+  public findFromLast<DiscriminatedFact extends Fact>(stop: (fact: Fact) => fact is DiscriminatedFact): Promise<DiscriminatedFact[]>
+  public findFromLast(stop: (fact: Fact) => boolean): Promise<Fact[]>
+  public async findFromLast(stop: (fact: Fact) => boolean): Promise<Fact[]> {
     return until(Array.from(this.facts.values()).reverse(), stop).reverse()
   }
 
@@ -383,6 +374,9 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
     }
   }
 
+
+  public find<DiscriminatedFact extends Fact>(accept: (fact: Fact) => fact is DiscriminatedFact): Promise<UnexpectedError | ParseError | DiscriminatedFact[]>
+  public find(accept?: (fact: Fact) => boolean): Promise<UnexpectedError | ParseError | Fact[]>
   public async find(accept: (fact: Fact) => boolean = () => true): Promise<UnexpectedError | ParseError | Fact[]> {
     try {
       const acceptedFacts: Fact[] = []
@@ -407,7 +401,9 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
     }
   }
 
-  public async findFromLast(stop: Stop<Fact>): Promise<UnexpectedError | ParseError | Fact[]> {
+  public findFromLast<DiscriminatedFact extends Fact>(stop: (fact: Fact) => fact is DiscriminatedFact): Promise<UnexpectedError | ParseError | DiscriminatedFact[]>
+  public findFromLast(stop: (fact: Fact) => boolean): Promise<UnexpectedError | ParseError | Fact[]>
+  public async findFromLast(stop: (fact: Fact) => boolean): Promise<UnexpectedError | ParseError | Fact[]> {
     try {
       const statement = this.database.prepare("SELECT fact FROM facts ORDER BY rowid DESC");
       const facts: Fact[] = []
@@ -427,7 +423,7 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
         }
       }
 
-      return facts;
+      return facts
     } catch (error) {
       return new UnexpectedError(error)
     }
@@ -465,4 +461,3 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
     this.database.close()
   }
 }
-
