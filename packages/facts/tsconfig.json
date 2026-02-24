@@ -1,8 +1,16 @@
 {
+  "include": [
+    "index.ts",
+    "index.test.ts",
+    "vite.config.ts"
+  ],
   "compilerOptions": {
     "target": "esnext",
     "module": "esnext",
     "moduleResolution": "node",
-    "strict": true
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "strict": true,
+    "skipLibCheck": true
   }
 }
