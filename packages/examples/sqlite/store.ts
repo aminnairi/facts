@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { FactShape, ParseError, SqliteFactStore } from "@aminnairi/facts";
+import { type FactShape, ParseError, SqliteFactStore } from "@aminnairi/facts";
 import { z, ZodType } from "zod"
 
 const todoAddedV1FactSchema = z.object({
