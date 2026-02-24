@@ -1,4 +1,4 @@
-import { match, Query, MemoryFactStore, FactShape } from "@aminnairi/facts";
+import { match, type Query, MemoryFactStore, type FactShape } from "@aminnairi/facts";
 import { randomUUID } from "node:crypto"
 
 interface TodoAddedV1Fact extends FactShape {
