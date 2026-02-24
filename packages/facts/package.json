@@ -14,6 +14,7 @@
   "devDependencies": {
     "@types/node": "^24.10.1",
     "@vitest/coverage-v8": "^4.0.9",
+    "exhaustive": "^1.1.2",
     "tsx": "^4.20.6",
     "zod": "^4.1.12"
   },
