@@ -389,7 +389,7 @@ test("It should match the correct fact", () => {
 })
 
 test("It should work with the SQLite implementation", async () => {
-  const factStore = SqliteFactStore.for<UserFact>(":memory:", {
+  const factStore = SqliteFactStore.for(":memory:", {
     parser: zodParser
   })
 
