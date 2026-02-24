@@ -1,5 +1,5 @@
 
-import { FactShape, match, MemoryFactStore, Query } from "@aminnairi/facts"
+import { type FactShape, match, MemoryFactStore, type Query } from "@aminnairi/facts"
 
 interface TodoAddedV1Fact extends FactShape {
   name: "todo-added"
