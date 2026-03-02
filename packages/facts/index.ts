@@ -118,20 +118,12 @@ export interface FactStore<Fact extends FactShape> {
   registerQuery(listener: Query<Fact>): void
 
   /**
-   * Registers a function that will be triggered each time a command sends a
-   * fact, it will be intercepted by the store and saved, along with
-   * broadcasting the fact to queries
-   * @param command The command used to listen for emitted facts
-   */
-  registerCommand(command: Command<Fact>): void
-
-  /**
    * Call the `handle` method of each query which have been registered using
    * the `register` method, for each facts that has been previously stored.
    * Although this method has no usefulness when a query state when using a persistent store
    * from previous facts, like the `SqliteFactStore`.
    */
-  initialize(): Promise<void | ParseError | UnexpectedError>
+  initialize(): Promise<void | ParseError | UnexpectedError | QueryInitializeError>
 }
 
 export class QueryInitializeError extends Error {
@@ -161,56 +153,6 @@ export interface Query<Fact extends FactShape> {
   initialize?: () => Promise<void | QueryInitializeError>
 }
 
-/**
- * A function that will be called when the command sends a fact, it will also
- * be used by the store to broadcast any fact to other queries as well
- */
-export type CommandListener<Fact extends FactShape> = (fact: Fact) => Promise<void | ConcurrencyError>
-
-/**
- * A command is an action that can be performed on the store
- */
-export interface Command<Fact extends FactShape> {
-  /**
-   * Send a fact to the store
-   */
-  send(fact: Fact): Promise<void | ConcurrencyError>
-
-  /**
-   * Add a listener, which will listen for each fact sent by the command
-   */
-  listen(listener: CommandListener<Fact>): void
-}
-
-/**
- * An in-memory implementation of a command, using a set to store listeners
- */
-export class MemoryCommand<Fact extends FactShape> implements Command<Fact> {
-  public constructor(private readonly listeners: Set<CommandListener<Fact>> = new Set) { }
-
-  public async send(fact: Fact) {
-    for (const listen of this.listeners) {
-      const error = await listen(fact)
-
-      if (error) {
-        return error
-      }
-    }
-  }
-
-  public listen(listener: CommandListener<Fact>) {
-    this.listeners.add(listener)
-  }
-}
-
-/**
- * Takes all the values from a list until the stop condition is met.
- *
- * @param values The list of values to take from.
- * @param stop The function that determines when to stop taking values.
- *
- * @template Value The type of the values in the list.
- */
 export function until<Value>(values: Value[], stop: (value: Value) => boolean): Value[] {
   const [value, ...remainingValues] = values
 
@@ -261,20 +203,8 @@ export class MemoryFactStore<Fact extends FactShape> implements FactStore<Fact> 
     private readonly queries: Set<Query<Fact>> = new Set()
   ) { }
 
-  registerCommand(command: Command<Fact>): void {
-    command.listen(fact => {
-      return this.save(fact)
-    })
-  }
-
-  public async registerQuery(query: Query<Fact>) {
-    try {
-      this.queries.add(query)
-
-      return query.initialize?.();
-    } catch (error) {
-      return new QueryInitializeError(String(error));
-    }
+  public registerQuery(query: Query<Fact>) {
+    this.queries.add(query)
   }
 
   public find<DiscriminatedFact extends Fact>(accept: (fact: Fact) => fact is DiscriminatedFact): Promise<DiscriminatedFact[]>
@@ -303,12 +233,24 @@ export class MemoryFactStore<Fact extends FactShape> implements FactStore<Fact> 
     this.facts.set(key, fact)
   }
 
-  public async initialize(): Promise<void> {
-    this.facts.forEach(fact => {
-      this.queries.forEach(query => {
-        query.handle(fact)
+  public async initialize(): Promise<void | QueryInitializeError> {
+    try {
+      for (const query of this.queries) {
+        const result = await query.initialize?.()
+
+        if (result instanceof QueryInitializeError) {
+          return result
+        }
+      }
+
+      this.facts.forEach(fact => {
+        this.queries.forEach(query => {
+          query.handle(fact)
+        })
       })
-    })
+    } catch (error) {
+      return new QueryInitializeError(String(error))
+    }
   }
 }
 
@@ -329,12 +271,6 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
    * @param parser A function that parses a fact from the database.
    */
   private constructor(private readonly database: DatabaseSync, private readonly parser: (fact: unknown) => Fact | ParseError) { }
-
-  registerCommand(command: Command<Fact>): void {
-    command.listen(fact => {
-      return this.save(fact)
-    })
-  }
 
   /**
    * Creates a new `SqliteFactStore` for the given database path.
@@ -446,8 +382,20 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
     this.queries.add(listener);
   }
 
-  public async initialize(): Promise<void | ParseError | UnexpectedError> {
+  public async initialize(): Promise<void | ParseError | UnexpectedError | QueryInitializeError> {
     try {
+      for (const query of this.queries) {
+        try {
+          const result = await query.initialize?.()
+
+          if (result instanceof QueryInitializeError) {
+            return result
+          }
+        } catch (error) {
+          return new QueryInitializeError(String(error))
+        }
+      }
+
       const statement = this.database.prepare("SELECT fact from facts")
 
       for (const row of statement.iterate()) {
