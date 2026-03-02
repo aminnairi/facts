@@ -10,19 +10,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - New `QueryInitializeError` class for handling query initialization errors.
-- New optional `initialize` method on the `Query` interface that is called when a query is registered in a store.
+- New optional `initialize` method on the `Query` interface that is called when `store.initialize()` is invoked.
 
 ### Changed
 
-- `MemoryFactStore.registerQuery` is now asynchronous and returns `Promise<void | QueryInitializeError>`.
 - The `Query` interface now only takes one generic type parameter (`Fact`) instead of two.
 - The `fetch` method has been removed from the `Query` interface. Users can now define their own method with any name and signature to fetch data from their queries.
+- Removed the `Command` interface and `MemoryCommand` class. Users are encouraged to define their own command classes using the adapter pattern with dependency injection.
 
 ### Breaking Changes
 
-- The return type of `MemoryFactStore.registerQuery` has changed from `void` to `Promise<void | QueryInitializeError>`. Existing code that calls `registerQuery` without awaiting the result will need to be updated to handle the promise.
 - The `Query` interface no longer includes the `fetch` method. Users should define their own method for fetching query data.
 - The second generic type parameter (`Data`) has been removed from the `Query` interface.
+- The `Command` interface and `MemoryCommand` class have been removed. Users should define their own command classes.
+- The `registerCommand` method has been removed from `FactStore` implementations.
 
 ## [2.1.0] - 2026-02-24
 
