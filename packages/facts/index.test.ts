@@ -1,5 +1,5 @@
 import { test, expect, vi } from "vitest"
-import { ConcurrencyError, type FactShape, match, MemoryCommand, MemoryFactStore, ParseError, type Query, SqliteFactStore, UnexpectedError, until } from "."
+import { ConcurrencyError, type FactShape, match, MemoryCommand, MemoryFactStore, ParseError, QueryInitializeError, type Query, SqliteFactStore, UnexpectedError, until } from "."
 import { randomUUID } from "crypto"
 import { z, ZodType } from "zod"
 import { rm } from "node:fs/promises"
@@ -58,6 +58,8 @@ const zodParser = (fact: unknown): UserFact | ParseError => {
 };
 
 type UserCreatedV1Fact = z.infer<typeof userCreatedV1FactSchema>
+
+type UserDeletedV1Fact = z.infer<typeof userDeletedV1FactSchema>
 
 type UserFact = z.infer<typeof userFactSchema>
 
@@ -951,6 +953,232 @@ test("registerCommand should work as expected for the in memory fact store", asy
   ])
 })
 
+
+test("It should return a QueryInitializeError when initialize throws", async () => {
+  const factStore = new MemoryFactStore<UserFact>()
+  const queryWithInitialize: Query<UserFact, unknown> = {
+    handle: async () => {},
+    fetch: async () => ({}),
+    initialize: () => {
+      throw new Error("Initialization failed")
+    }
+  }
+
+  const result = await factStore.registerQuery(queryWithInitialize)
+
+  expect(result).toBeInstanceOf(QueryInitializeError)
+})
+
+test("It should return a QueryInitializeError when initialize returns an error", async () => {
+  const factStore = new MemoryFactStore<UserFact>()
+  const queryWithInitialize: Query<UserFact, unknown> = {
+    handle: async () => {},
+    fetch: async () => ({}),
+    initialize: async () => {
+      return new QueryInitializeError("Initialization failed")
+    }
+  }
+
+  const result = await factStore.registerQuery(queryWithInitialize)
+
+  expect(result).toBeInstanceOf(QueryInitializeError)
+})
+
+test("It should find with discriminated fact type predicate", async () => {
+  const factStore = new MemoryFactStore<UserFact>()
+  const streamIdentifier = randomUUID()
+
+  await factStore.save({
+    identifier: randomUUID(),
+    name: "user-created",
+    position: 0,
+    version: 1,
+    date: new Date("2025-01-01"),
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
+    payload: {
+      email: "email@domain.com",
+      password: "password"
+    }
+  })
+
+  await factStore.save({
+    identifier: randomUUID(),
+    name: "user-deleted",
+    position: 1,
+    version: 1,
+    date: new Date("2025-01-01"),
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
+    payload: null
+  })
+
+  const facts = await factStore.find((fact): fact is UserCreatedV1Fact => {
+    return fact.name === "user-created"
+  }) as UserCreatedV1Fact[]
+
+  expect(facts).toHaveLength(1)
+  expect(facts[0].name).toStrictEqual("user-created")
+})
+
+test("It should find from last with discriminated fact type predicate", async () => {
+  const factStore = new MemoryFactStore<UserFact>()
+  const streamIdentifier = randomUUID()
+
+  await factStore.save({
+    identifier: randomUUID(),
+    name: "user-created",
+    position: 0,
+    version: 1,
+    date: new Date("2025-01-01"),
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
+    payload: {
+      email: "email@domain.com",
+      password: "password"
+    }
+  })
+
+  await factStore.save({
+    identifier: randomUUID(),
+    name: "user-deleted",
+    position: 1,
+    version: 1,
+    date: new Date("2025-01-02"),
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
+    payload: null
+  })
+
+  await factStore.save({
+    identifier: randomUUID(),
+    name: "user-created",
+    position: 2,
+    version: 1,
+    date: new Date("2025-01-03"),
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
+    payload: {
+      email: "another@domain.com",
+      password: "password"
+    }
+  })
+
+  const facts = await factStore.findFromLast((fact): fact is UserDeletedV1Fact => {
+    return fact.name === "user-deleted"
+  })
+
+  expect(facts).toHaveLength(2)
+  expect(facts[0].name).toStrictEqual("user-deleted")
+  expect(facts[1].name).toStrictEqual("user-created")
+})
+
+test("It should find with discriminated fact type predicate in SQLite", async () => {
+  const factStore = SqliteFactStore.for<UserFact>(":memory:", {
+    parser: zodParser
+  })
+
+  if (factStore instanceof Error) {
+    throw factStore
+  }
+
+  const streamIdentifier = randomUUID()
+
+  await factStore.save({
+    identifier: randomUUID(),
+    name: "user-created",
+    position: 0,
+    version: 1,
+    date: new Date("2025-01-01"),
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
+    payload: {
+      email: "email@domain.com",
+      password: "password"
+    }
+  })
+
+  await factStore.save({
+    identifier: randomUUID(),
+    name: "user-deleted",
+    position: 1,
+    version: 1,
+    date: new Date("2025-01-01"),
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
+    payload: null
+  })
+
+  const facts = await factStore.find((fact): fact is UserCreatedV1Fact => {
+    return fact.name === "user-created"
+  }) as UserCreatedV1Fact[]
+
+  expect(facts).toHaveLength(1)
+  expect(facts[0].name).toStrictEqual("user-created")
+
+  factStore.close()
+})
+
+test("It should find from last with discriminated fact type predicate in SQLite", async () => {
+  const factStore = SqliteFactStore.for<UserFact>(":memory:", {
+    parser: zodParser
+  })
+
+  if (factStore instanceof Error) {
+    throw factStore
+  }
+
+  const streamIdentifier = randomUUID()
+
+  await factStore.save({
+    identifier: randomUUID(),
+    name: "user-created",
+    position: 0,
+    version: 1,
+    date: new Date("2025-01-01"),
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
+    payload: {
+      email: "email@domain.com",
+      password: "password"
+    }
+  })
+
+  await factStore.save({
+    identifier: randomUUID(),
+    name: "user-deleted",
+    position: 1,
+    version: 1,
+    date: new Date("2025-01-02"),
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
+    payload: null
+  })
+
+  await factStore.save({
+    identifier: randomUUID(),
+    name: "user-created",
+    position: 2,
+    version: 1,
+    date: new Date("2025-01-03"),
+    streamName: "user",
+    streamIdentifier: streamIdentifier,
+    payload: {
+      email: "another@domain.com",
+      password: "password"
+    }
+  })
+
+  const facts = await factStore.findFromLast((fact): fact is UserDeletedV1Fact => {
+    return fact.name === "user-deleted"
+  }) as UserDeletedV1Fact[]
+
+  expect(facts).toHaveLength(2)
+  expect(facts[0].name).toStrictEqual("user-deleted")
+  expect(facts[1].name).toStrictEqual("user-created")
+
+  factStore.close()
+})
 
 test("registerCommand should work as expected for the sqlite fact store", async () => {
   const factStore = SqliteFactStore.for<UserFact>(":memory:", {
