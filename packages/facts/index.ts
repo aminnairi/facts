@@ -134,6 +134,14 @@ export interface FactStore<Fact extends FactShape> {
   initialize(): Promise<void | ParseError | UnexpectedError>
 }
 
+export class QueryInitializeError extends Error {
+  public override readonly name = "QueryInitializeError"
+
+  public constructor(public readonly message: string) {
+    super(message);
+  }
+}
+
 /**
  * Represents a query that can be registered with a fact store to process facts
  * as they are saved.
@@ -152,6 +160,10 @@ export interface Query<Fact extends FactShape, Data> {
    * Fetches the data that has been accumulated by the query.
    */
   fetch(): Promise<Data>
+  /**
+   * Called once when registered using the FactStore.query method. Not useful if you are building an in-memory query, but proves itself useful when dealing with SQL databases for creating the schema.
+   */
+  initialize?: () => Promise<void | QueryInitializeError>
 }
 
 /**
@@ -260,8 +272,14 @@ export class MemoryFactStore<Fact extends FactShape> implements FactStore<Fact> 
     })
   }
 
-  public registerQuery(query: Query<Fact, unknown>): void {
-    this.queries.add(query)
+  public async registerQuery(query: Query<Fact, unknown>) {
+    try {
+      this.queries.add(query)
+
+      return query.initialize?.();
+    } catch (error) {
+      return new QueryInitializeError(String(error));
+    }
   }
 
   public find<DiscriminatedFact extends Fact>(accept: (fact: Fact) => fact is DiscriminatedFact): Promise<DiscriminatedFact[]>
