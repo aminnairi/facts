@@ -30,7 +30,7 @@ interface Todo {
   createdAt: Date
 }
 
-class MemoryTodosQuery implements Query<TodoFact, Todo[]> {
+class MemoryTodosQuery implements Query<TodoFact> {
   public constructor(private readonly todos: Map<string, Todo> = new Map()) { }
 
   public async handle(fact: TodoFact): Promise<void> {
@@ -49,7 +49,7 @@ class MemoryTodosQuery implements Query<TodoFact, Todo[]> {
     })
   }
 
-  public async fetch(): Promise<Todo[]> {
+  public async getTodos(): Promise<Todo[]> {
     return Array.from(this.todos.values())
   }
 }
@@ -81,7 +81,7 @@ factStore.registerQuery(query)
 
 await factStore.initialize()
 
-const todos = await query.fetch()
+const todos = await query.getTodos()
 
 for (const todo of todos) {
   console.log(`Todo#${todo.identifier.slice(0, 6)}: (${todo.done ? "Done" : "Todo"}) ${todo.name}`)
