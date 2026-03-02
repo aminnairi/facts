@@ -141,7 +141,7 @@ if (error instanceof Error) {
 
 ### Save facts
 
-Save facts to the store using the adapter pattern. The `position` property is used for optimistic locking.
+Save facts to the store using dependency injection. The `position` property is used for optimistic locking.
 
 ```typescript
 import { randomUUID } from "crypto";
@@ -207,7 +207,7 @@ for (const todo of todos) {
 
 ### Commands
 
-The `FactStore` acts as the Command side in CQRS. Define your commands as classes that depend on the store using the adapter pattern:
+The `FactStore` acts as the Command side in CQRS. Define your commands as classes that depend on the store using dependency injection:
 
 ```typescript
 class AddTodoCommand {
