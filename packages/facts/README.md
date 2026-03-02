@@ -284,6 +284,17 @@ class ParseError extends Error {
 }
 ```
 
+### QueryInitializeError
+
+This is a custom error class that is thrown when the query's `initialize` method
+fails.
+
+```typescript
+class QueryInitializeError extends Error {
+  public override readonly name = "QueryInitializeError";
+}
+```
+
 ### FactStore
 
 This is an interface that defines the contract for a fact store.
@@ -303,11 +314,15 @@ interface FactStore<Fact extends FactShape> {
   findFromLast(
     stop: (fact: Fact) => boolean,
   ): Promise<Fact[] | UnexpectedError | ParseError>;
-  registerQuery(listener: Query<Fact, unknown>): void;
+  registerQuery(listener: Query<Fact, unknown>): Promise<void | QueryInitializeError>;
   registerCommand(command: Command<Fact>): void;
   initialize(): Promise<void | ParseError | UnexpectedError>;
 }
 ```
+
+When calling `registerQuery`, if the query implements the `initialize` method, it will
+be called automatically. This allows queries to set up their data model (e.g., create
+tables in SQLite) when they are registered.
 
 ### Query
 
@@ -318,8 +333,14 @@ be used to build read models.
 interface Query<Fact extends FactShape, Data> {
   handle(fact: Fact): Promise<void>;
   fetch(): Promise<Data>;
+  initialize?: () => Promise<void | QueryInitializeError>;
 }
 ```
+
+The `initialize` method is optional and is called once when the query is registered
+using `FactStore.registerQuery`. This is useful for databases like SQLite or PostgreSQL
+that need to create tables or set up the data model before handling facts. It is not
+necessary for in-memory queries.
 
 ### Command
 
