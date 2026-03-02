@@ -115,7 +115,7 @@ export interface FactStore<Fact extends FactShape> {
    *
    * @param listener The query to register.
    */
-  registerQuery(listener: Query<Fact, unknown>): void
+  registerQuery(listener: Query<Fact>): void
 
   /**
    * Registers a function that will be triggered each time a command sends a
@@ -147,19 +147,14 @@ export class QueryInitializeError extends Error {
  * as they are saved.
  *
  * @template Fact The shape of the facts that are processed.
- * @template Data The shape of the data that is returned by the query.
  */
-export interface Query<Fact extends FactShape, Data> {
+export interface Query<Fact extends FactShape> {
   /**
    * Handles a fact that has been saved in the store.
    *
    * @param fact The fact that has been saved.
    */
   handle(fact: Fact): Promise<void>
-  /**
-   * Fetches the data that has been accumulated by the query.
-   */
-  fetch(): Promise<Data>
   /**
    * Called once when registered using the FactStore.query method. Not useful if you are building an in-memory query, but proves itself useful when dealing with SQL databases for creating the schema.
    */
@@ -263,7 +258,7 @@ export class MemoryFactStore<Fact extends FactShape> implements FactStore<Fact> 
    */
   public constructor(
     private readonly facts: Map<string, Fact> = new Map(),
-    private readonly queries: Set<Query<Fact, unknown>> = new Set()
+    private readonly queries: Set<Query<Fact>> = new Set()
   ) { }
 
   registerCommand(command: Command<Fact>): void {
@@ -272,7 +267,7 @@ export class MemoryFactStore<Fact extends FactShape> implements FactStore<Fact> 
     })
   }
 
-  public async registerQuery(query: Query<Fact, unknown>) {
+  public async registerQuery(query: Query<Fact>) {
     try {
       this.queries.add(query)
 
@@ -327,7 +322,7 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
   /**
    * A set of queries that are registered with the store.
    */
-  private readonly queries: Set<Query<Fact, unknown>> = new Set();
+  private readonly queries: Set<Query<Fact>> = new Set();
 
   /**
    * @param database The SQLite database to use for storing facts.
@@ -447,7 +442,7 @@ export class SqliteFactStore<Fact extends FactShape> implements FactStore<Fact> 
     }
   }
 
-  public registerQuery(listener: Query<Fact, unknown>): void {
+  public registerQuery(listener: Query<Fact>): void {
     this.queries.add(listener);
   }
 
