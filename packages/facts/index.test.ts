@@ -1,5 +1,5 @@
-import { test, expect, vi } from "vitest"
-import { ConcurrencyError, type FactShape, match, MemoryCommand, MemoryFactStore, ParseError, QueryInitializeError, type Query, SqliteFactStore, UnexpectedError, until } from "."
+import { test, expect } from "vitest"
+import { ConcurrencyError, type FactShape, match, MemoryFactStore, ParseError, QueryInitializeError, type Query, SqliteFactStore, UnexpectedError, until } from "."
 import { randomUUID } from "crypto"
 import { z, ZodType } from "zod"
 import { rm } from "node:fs/promises"
@@ -816,154 +816,18 @@ test("It should return a ParseError when initializing with a malformed fact", as
   factStore.close()
 });
 
-test("It should create a command correctly", () => {
-  const command = new MemoryCommand<UserCreatedV1Fact>
-
-  expect(command).toBeInstanceOf(MemoryCommand)
-})
-
-test("It should create a command with listeners correctly", async () => {
-  const command = new MemoryCommand<UserCreatedV1Fact>
-  const callback = vi.fn()
-
-  command.listen(callback)
-
-  const identifier = randomUUID()
-  const date = new Date()
-  const name = "user-created"
-  const streamName = "user"
-  const streamIdentifier = randomUUID()
-  const position = 0
-  const version = 1
-  const payload = {
-    email: "user@example.com",
-    password: "pass123"
-  }
-
-  const error = await command.send({
-    identifier,
-    date,
-    name,
-    payload,
-    position,
-    version,
-    streamIdentifier,
-    streamName
-  })
-
-  expect(callback).toHaveBeenCalledWith({
-    identifier,
-    date,
-    name,
-    payload,
-    position,
-    version,
-    streamIdentifier,
-    streamName
-  })
-
-  expect(error).toBeUndefined()
-})
-
-test("It should create a command with listeners correctly", async () => {
-  const command = new MemoryCommand<UserCreatedV1Fact>
-  const callback = vi.fn(async () => new ConcurrencyError)
-
-  command.listen(callback)
-
-  const identifier = randomUUID()
-  const date = new Date()
-  const name = "user-created"
-  const streamName = "user"
-  const streamIdentifier = randomUUID()
-  const position = 0
-  const version = 1
-  const payload = {
-    email: "user@example.com",
-    password: "pass123"
-  }
-
-  const error = await command.send({
-    identifier,
-    date,
-    name,
-    payload,
-    position,
-    version,
-    streamIdentifier,
-    streamName
-  })
-
-  expect(callback).toHaveBeenCalledWith({
-    identifier,
-    date,
-    name,
-    payload,
-    position,
-    version,
-    streamIdentifier,
-    streamName
-  })
-
-  expect(error).toBeInstanceOf(ConcurrencyError)
-})
-
-test("registerCommand should work as expected for the in memory fact store", async () => {
-  const factStore = new MemoryFactStore<UserFact>
-  const createUserCommand = new MemoryCommand<UserCreatedV1Fact>
-
-  factStore.registerCommand(createUserCommand)
-
-  const identifier = randomUUID()
-  const date = new Date()
-  const streamIdentifier = randomUUID()
-
-  const error = await createUserCommand.send({
-    date,
-    identifier,
-    name: "user-created",
-    position: 0,
-    streamIdentifier,
-    streamName: "user",
-    version: 1,
-    payload: {
-      email: "email@domain.com",
-      password: "pass123"
-    }
-  })
-
-  const facts = await factStore.find()
-
-  expect(error).toBeUndefined()
-
-  expect(facts).toStrictEqual([
-    {
-      date,
-      identifier,
-      name: "user-created",
-      position: 0,
-      streamIdentifier,
-      streamName: "user",
-      version: 1,
-      payload: {
-        email: "email@domain.com",
-        password: "pass123"
-      }
-    }
-  ])
-})
-
-
 test("It should return a QueryInitializeError when initialize throws", async () => {
   const factStore = new MemoryFactStore<UserFact>()
   const queryWithInitialize: Query<UserFact> = {
-    handle: async () => {},
+    handle: async () => { },
     initialize: () => {
       throw new Error("Initialization failed")
     }
   }
 
-  const result = await factStore.registerQuery(queryWithInitialize)
+  factStore.registerQuery(queryWithInitialize)
+
+  const result = await factStore.initialize()
 
   expect(result).toBeInstanceOf(QueryInitializeError)
 })
@@ -971,15 +835,67 @@ test("It should return a QueryInitializeError when initialize throws", async () 
 test("It should return a QueryInitializeError when initialize returns an error", async () => {
   const factStore = new MemoryFactStore<UserFact>()
   const queryWithInitialize: Query<UserFact> = {
-    handle: async () => {},
+    handle: async () => { },
     initialize: async () => {
       return new QueryInitializeError("Initialization failed")
     }
   }
 
-  const result = await factStore.registerQuery(queryWithInitialize)
+  factStore.registerQuery(queryWithInitialize)
+
+  const result = await factStore.initialize()
 
   expect(result).toBeInstanceOf(QueryInitializeError)
+})
+
+test("It should return a QueryInitializeError when initialize throws in SQLite", async () => {
+  const factStore = SqliteFactStore.for<UserFact>(":memory:", {
+    parser: zodParser
+  })
+
+  if (factStore instanceof Error) {
+    throw factStore
+  }
+
+  const queryWithInitialize: Query<UserFact> = {
+    handle: async () => { },
+    initialize: () => {
+      throw new Error("Initialization failed")
+    }
+  }
+
+  factStore.registerQuery(queryWithInitialize)
+
+  const result = await factStore.initialize()
+
+  expect(result).toBeInstanceOf(QueryInitializeError)
+
+  factStore.close()
+})
+
+test("It should return a QueryInitializeError when initialize returns an error in SQLite", async () => {
+  const factStore = SqliteFactStore.for<UserFact>(":memory:", {
+    parser: zodParser
+  })
+
+  if (factStore instanceof Error) {
+    throw factStore
+  }
+
+  const queryWithInitialize: Query<UserFact> = {
+    handle: async () => { },
+    initialize: async () => {
+      return new QueryInitializeError("Initialization failed")
+    }
+  }
+
+  factStore.registerQuery(queryWithInitialize)
+
+  const result = await factStore.initialize()
+
+  expect(result).toBeInstanceOf(QueryInitializeError)
+
+  factStore.close()
 })
 
 test("It should find with discriminated fact type predicate", async () => {
@@ -1176,52 +1092,4 @@ test("It should find from last with discriminated fact type predicate in SQLite"
   expect(facts[1].name).toStrictEqual("user-created")
 
   factStore.close()
-})
-
-test("registerCommand should work as expected for the sqlite fact store", async () => {
-  const factStore = SqliteFactStore.for<UserFact>(":memory:", {
-    parser: zodParser
-  })
-
-  const createUserCommand = new MemoryCommand<UserCreatedV1Fact>
-
-  factStore.registerCommand(createUserCommand)
-
-  const identifier = randomUUID()
-  const date = new Date()
-  const streamIdentifier = randomUUID()
-
-  const error = await createUserCommand.send({
-    date,
-    identifier,
-    name: "user-created",
-    position: 0,
-    streamIdentifier,
-    streamName: "user",
-    version: 1,
-    payload: {
-      email: "email@domain.com",
-      password: "pass123"
-    }
-  })
-
-  const facts = await factStore.find()
-
-  expect(error).toBeUndefined()
-
-  expect(facts).toStrictEqual([
-    {
-      date,
-      identifier,
-      name: "user-created",
-      position: 0,
-      streamIdentifier,
-      streamName: "user",
-      version: 1,
-      payload: {
-        email: "email@domain.com",
-        password: "pass123"
-      }
-    }
-  ])
 })
