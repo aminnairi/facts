@@ -2,7 +2,7 @@
   "type": "module",
   "name": "@aminnairi/facts",
   "description": "Database agnostic implementation of the Event Sourcing & CQRS design pattern",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "homepage": "https://github.com/aminnairi/facts#readme",
   "license": "MIT",
   "scripts": {
