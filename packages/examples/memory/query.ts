@@ -38,7 +38,7 @@ interface DescribedTodo {
   createdAt: Date
 }
 
-class MemoryDescribedTodoQuery implements Query<TodoFact, DescribedTodo[]> {
+class MemoryDescribedTodoQuery implements Query<TodoFact> {
   public constructor(private readonly todos: Map<string, DescribedTodo> = new Map()) { }
 
   public async handle(fact: TodoFact): Promise<void> {
@@ -58,7 +58,7 @@ class MemoryDescribedTodoQuery implements Query<TodoFact, DescribedTodo[]> {
     }
   }
 
-  public async fetch(): Promise<DescribedTodo[]> {
+  public async getDescribedTodos(): Promise<DescribedTodo[]> {
     return Array.from(this.todos.values())
   }
 }
@@ -69,7 +69,7 @@ interface Invoice {
   createdAt: Date
 }
 
-class MemoryInvoicesQuery implements Query<TodoFact, Invoice[]> {
+class MemoryInvoicesQuery implements Query<TodoFact> {
   public constructor(private readonly invoices: Map<string, Invoice> = new Map()) { }
 
   public async handle(fact: TodoFact): Promise<void> {
@@ -86,7 +86,7 @@ class MemoryInvoicesQuery implements Query<TodoFact, Invoice[]> {
     }
   }
 
-  public async fetch(): Promise<Invoice[]> {
+  public async getInvoices(): Promise<Invoice[]> {
     return Array.from(this.invoices.values())
   }
 }
@@ -156,7 +156,7 @@ if (error instanceof Error) {
 
 console.log("List of facts")
 
-const todos = await describedTodoQuery.fetch()
+const todos = await describedTodoQuery.getDescribedTodos()
 
 for (const todo of todos) {
   console.log(`Todo#${todo.identifier}: ${todo.description} (${todo.createdAt})`)
@@ -164,7 +164,7 @@ for (const todo of todos) {
 
 console.log("List of invoices")
 
-const invoices = await invoicesQuery.fetch()
+const invoices = await invoicesQuery.getInvoices()
 
 for (const invoice of invoices) {
   console.log(`Invoice#${invoice.identifier} (${invoice.createdAt}): $${invoice.amount}`)
