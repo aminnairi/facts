@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-03-02
+
+### Added
+
+- New `QueryInitializeError` class for handling query initialization errors.
+- New optional `initialize` method on the `Query` interface that is called when a query is registered in a store.
+
+### Changed
+
+- `MemoryFactStore.registerQuery` is now asynchronous and returns `Promise<void | QueryInitializeError>`.
+
+### Breaking Changes
+
+- The return type of `MemoryFactStore.registerQuery` has changed from `void` to `Promise<void | QueryInitializeError>`. Existing code that calls `registerQuery` without awaiting the result will need to be updated to handle the promise.
+
 ## [2.1.0] - 2026-02-24
 
 ### Added
