@@ -67,7 +67,7 @@ interface UserWithEmail {
   email: string
 }
 
-class MemoryUsersWithEmailQuery implements Query<UserFact, UserWithEmail[]> {
+class MemoryUsersWithEmailQuery implements Query<UserFact> {
   public constructor(private readonly usersWithEmail: Map<string, UserWithEmail> = new Map()) { }
 
   public async handle(fact: UserFact): Promise<void> {
@@ -956,9 +956,8 @@ test("registerCommand should work as expected for the in memory fact store", asy
 
 test("It should return a QueryInitializeError when initialize throws", async () => {
   const factStore = new MemoryFactStore<UserFact>()
-  const queryWithInitialize: Query<UserFact, unknown> = {
+  const queryWithInitialize: Query<UserFact> = {
     handle: async () => {},
-    fetch: async () => ({}),
     initialize: () => {
       throw new Error("Initialization failed")
     }
@@ -971,9 +970,8 @@ test("It should return a QueryInitializeError when initialize throws", async () 
 
 test("It should return a QueryInitializeError when initialize returns an error", async () => {
   const factStore = new MemoryFactStore<UserFact>()
-  const queryWithInitialize: Query<UserFact, unknown> = {
+  const queryWithInitialize: Query<UserFact> = {
     handle: async () => {},
-    fetch: async () => ({}),
     initialize: async () => {
       return new QueryInitializeError("Initialization failed")
     }
