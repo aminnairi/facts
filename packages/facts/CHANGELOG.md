@@ -15,10 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `MemoryFactStore.registerQuery` is now asynchronous and returns `Promise<void | QueryInitializeError>`.
+- The `Query` interface now only takes one generic type parameter (`Fact`) instead of two.
+- The `fetch` method has been removed from the `Query` interface. Users can now define their own method with any name and signature to fetch data from their queries.
 
 ### Breaking Changes
 
 - The return type of `MemoryFactStore.registerQuery` has changed from `void` to `Promise<void | QueryInitializeError>`. Existing code that calls `registerQuery` without awaiting the result will need to be updated to handle the promise.
+- The `Query` interface no longer includes the `fetch` method. Users should define their own method for fetching query data.
+- The second generic type parameter (`Data`) has been removed from the `Query` interface.
 
 ## [2.1.0] - 2026-02-24
 
