@@ -26,7 +26,7 @@ Sourcing & CQRS design patterns while reducing the friction of implementation.
 - Ready for deployment in clusters thanks to optimistic locking
 - Database agnostic, use files, SQL, NoSQL, IndexedDB, LocalStorage, etc...
 - Event Sourcing inspired to prevent data loss and enable smarter analytics
-- Query & Command implementation for CQRS applications
+- Query implementation for CQRS applications
 - Easy initialization of Queries from past events useful after application restart
 - No migration script required, evolve your data model as your project evolve
 
@@ -101,7 +101,7 @@ interface Todo {
   done: boolean;
 }
 
-class MemoryTodosQuery implements Query<TodoFact, Todo[]> {
+class MemoryTodosQuery implements Query<TodoFact> {
   public constructor(private readonly todos: Map<string, Todo> = new Map()) {}
 
   public async handle(fact: TodoFact): Promise<void> {
@@ -119,7 +119,7 @@ class MemoryTodosQuery implements Query<TodoFact, Todo[]> {
     });
   }
 
-  public async fetch(): Promise<Todo[]> {
+  public async getTodos(): Promise<Todo[]> {
     return Array.from(this.todos.values());
   }
 }
@@ -127,22 +127,10 @@ class MemoryTodosQuery implements Query<TodoFact, Todo[]> {
 const todosQuery = new MemoryTodosQuery();
 ```
 
-### Define commands
-
-```typescript
-import { MemoryCommand } from "@aminnairi/facts";
-
-const addTodoCommand = new MemoryCommand<TodoAddedV1Fact>();
-const removeTodoCommand = new MemoryCommand<TodoRemovedV1Fact>();
-```
-
-### Register queries & commands
+### Register queries
 
 ```typescript
 factStore.registerQuery(todosQuery);
-
-factStore.registerCommand(addTodoCommand);
-factStore.registerCommand(removeTodoCommand);
 
 const error = await factStore.initialize();
 
@@ -153,10 +141,14 @@ if (error instanceof Error) {
 
 ### Save facts
 
-Save facts to the store. The `position` property is used for optimistic locking.
+Save facts to the store using the adapter pattern. The `position` property is used for optimistic locking.
 
 ```typescript
-await addTodoCommand.send({
+import { randomUUID } from "crypto";
+
+const streamIdentifier = randomUUID();
+
+await factStore.save({
   identifier: randomUUID(),
   name: "todo-added",
   version: 1,
@@ -170,7 +162,7 @@ await addTodoCommand.send({
   },
 });
 
-await removeTodoCommand.send({
+await factStore.save({
   identifier: randomUUID(),
   name: "todo-removed",
   version: 1,
@@ -203,15 +195,43 @@ for (const fact of result) {
 
 ### Fetch data
 
-Fetch the read model from your query.
+Fetch the read model from your query using your custom method.
 
 ```typescript
-const todos = await todosQuery.fetch();
+const todos = await todosQuery.getTodos();
 
 for (const todo of todos) {
   console.log(todo.name);
 }
 ```
+
+### Commands
+
+The `FactStore` acts as the Command side in CQRS. Define your commands as classes that depend on the store using the adapter pattern:
+
+```typescript
+class AddTodoCommand {
+  constructor(private readonly store: FactStore<TodoFact>) {}
+
+  async execute(name: string, done: boolean) {
+    await this.store.save({
+      identifier: randomUUID(),
+      name: "todo-added",
+      version: 1,
+      date: new Date(),
+      streamName: "todo",
+      streamIdentifier: randomUUID(),
+      position: 0,
+      payload: { name, done },
+    });
+  }
+}
+
+const addTodoCommand = new AddTodoCommand(factStore);
+await addTodoCommand.execute("Buy milk", false);
+```
+
+This approach makes your commands testable by allowing dependency injection.
 
 ## Run the script
 
@@ -314,15 +334,13 @@ interface FactStore<Fact extends FactShape> {
   findFromLast(
     stop: (fact: Fact) => boolean,
   ): Promise<Fact[] | UnexpectedError | ParseError>;
-  registerQuery(listener: Query<Fact, unknown>): Promise<void | QueryInitializeError>;
-  registerCommand(command: Command<Fact>): void;
-  initialize(): Promise<void | ParseError | UnexpectedError>;
+  registerQuery(listener: Query<Fact>): void;
+  initialize(): Promise<void | ParseError | UnexpectedError | QueryInitializeError>;
 }
 ```
 
-When calling `registerQuery`, if the query implements the `initialize` method, it will
-be called automatically. This allows queries to set up their data model (e.g., create
-tables in SQLite) when they are registered.
+When calling `store.initialize()`, the `initialize` method of each registered query will be called.
+This allows queries to set up their data model (e.g., create tables in SQLite).
 
 ### Query
 
@@ -330,36 +348,24 @@ This interface defines the contract for a query that can handle facts and can
 be used to build read models.
 
 ```typescript
-interface Query<Fact extends FactShape, Data> {
+interface Query<Fact extends FactShape> {
   handle(fact: Fact): Promise<void>;
-  fetch(): Promise<Data>;
   initialize?: () => Promise<void | QueryInitializeError>;
 }
 ```
 
-The `initialize` method is optional and is called once when the query is registered
-using `FactStore.registerQuery`. This is useful for databases like SQLite or PostgreSQL
-that need to create tables or set up the data model before handling facts. It is not
-necessary for in-memory queries.
+The `initialize` method is optional and is called once when `store.initialize()` is called.
+This is useful for databases like SQLite or PostgreSQL that need to create tables or
+set up the data model before handling facts. It is not necessary for in-memory queries.
 
-### Command
-
-This interface defines the contract for a command that can be used to send facts
-to the store.
+Define your own method to fetch data from your query:
 
 ```typescript
-interface Command<Fact extends FactShape> {
-  send(fact: Fact): Promise<void | ConcurrencyError>;
-  listen(listener: (fact: Fact) => Promise<void | ConcurrencyError>): void;
+class MyQuery implements Query<MyFact> {
+  async getData(): Promise<MyData> {
+    // your implementation
+  }
 }
-```
-
-### MemoryCommand
-
-Create a command for sending facts in RAM.
-
-```typescript
-class MemoryCommand<Fact extends FactShape> implements Command<Fact>
 ```
 
 ### until
