@@ -9,15 +9,13 @@
     "lint": "tsc --noEmit",
     "test": "vitest run --coverage"
   },
-  "dependencies": {
-    "vitest": "^4.0.9"
-  },
   "devDependencies": {
     "@types/node": "^24.10.1",
     "@vitest/coverage-v8": "^4.0.9",
     "exhaustive": "^1.1.2",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
+    "vitest": "^4.0.9",
     "zod": "^4.1.12"
   },
   "bugs": {
